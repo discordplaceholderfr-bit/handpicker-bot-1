@@ -1061,21 +1061,6 @@ function setupHandpicker(client) {
 
   client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
-    if (!interaction.customId.startsWith('remove_player_pick__')) return;
-    const userId = interaction.customId.split('__')[1];
-    if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });
-    const [gameId, factionName, country, targetUserId] = interaction.values[0].split('|||');
-    const game = games[gameId];
-    if (!game) return interaction.update({ content: '❌ List no longer exists.', components: [] });
-    delete game.factions[factionName]?.claims[country];
-    save(GAMES_FILE, games);
-    await refreshMessage(client, gameId, game);
-    if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUserId, factionName).catch(() => {}); }
-    return interaction.update({ content: `✅ Removed <@${targetUserId}>'s claim on **${country}**.`, components: [] });
-  });
-
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
     if (!interaction.customId.startsWith('view_list_pick__')) return;
     const userId = interaction.customId.split('__')[1];
     if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });

@@ -394,7 +394,7 @@ const watcherCommands = [
     .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting (default: 5)').setMinValue(0))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
     .addIntegerOption(o => o.setName('expire_in').setDescription('Cancel watching after X minutes if threshold not reached (default: 30)').setMinValue(1))
-    .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 40)').setMinValue(1))
+    .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
     .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role when the handpick list is posted? (default: false)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
     .toJSON(),
