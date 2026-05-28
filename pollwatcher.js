@@ -11,7 +11,7 @@ const {
   TextInputStyle,
 } = require('discord.js');
 
-const POLL_LOG_CHANNEL_ID = '1508275128025223238';
+const POLL_LOG_CHANNEL_ID = '1508275084026974293';
 const EVENT_PING_ROLE_ID  = '1464057119841062944';
 const fs   = require('fs');
 const path = require('path');
