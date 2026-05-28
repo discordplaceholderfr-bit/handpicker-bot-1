@@ -196,8 +196,10 @@ function buildEmbed(game) {
   Object.entries(game.factions).forEach(([name, faction], i) => {
     let lines = '';
     for (const country of faction.countries) {
-      const uid = faction.claims[country];
-      lines += uid ? `**${country}** — Claimed by <@${uid}>\n` : `${country}\n`;
+      const isMajor  = country.startsWith('*');
+      const display  = isMajor ? `🟡 ${country.slice(1)}` : country;
+      const uid      = faction.claims[country];
+      lines += uid ? `**${display}** — Claimed by <@${uid}>\n` : `${display}\n`;
     }
     embed.addFields({ name: `${emojis[i % emojis.length]} ${name}`, value: lines || '*No countries*', inline: false });
   });
@@ -221,7 +223,7 @@ function buildComponents(game, gameId) {
         new StringSelectMenuBuilder()
           .setCustomId(`claim__${gameId}__${factionName}`)
           .setPlaceholder(`Claim in ${factionName}...`)
-          .addOptions(unclaimed.map(c => ({ label: c, value: c })))
+          .addOptions(unclaimed.map(c => ({ label: (c.startsWith('*') ? `🟡 ${c.slice(1)}` : c).slice(0, 100), value: c })))
       )
     );
   }

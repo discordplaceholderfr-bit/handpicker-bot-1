@@ -44,7 +44,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/create_handpick` — Host',
-        value: 'Creates a new handpick list with a title and up to 5 factions. Each faction gets its own claiming dropdown in the posted embed.\n\n**Example:**\n`/create_handpick title:WW2 Europe faction1_name:Axis faction1_countries:Germany, Italy, Japan faction2_name:Allies faction2_countries:USA, UK, France`\n\nAfter running it you\'re asked if you want to pre-assign players before the list posts. Click **Add Preset Players** to open the assignment form or **Skip** to post immediately.',
+        value: 'Creates a new handpick list with a title and up to 5 factions. Each faction gets its own claiming dropdown in the posted embed.\n\n**Example:**\n`/create_handpick title:WW2 Europe faction1_name:Axis faction1_countries:*Germany, Italy, *Japan faction2_name:Allies faction2_countries:USA, *UK, France`\n\nAfter running it you\'re asked if you want to pre-assign players before the list posts. Click **Add Preset Players** to open the assignment form or **Skip** to post immediately.\n\n**Major countries:** prefix any country name with `*` to make it Major (e.g. `*Prussia`). It displays as 🟡 Prussia in the embed and is locked behind approved Major roles.',
       },
       {
         name: '`/import_handpick` — Host',
@@ -52,7 +52,7 @@ const CATEGORIES = {
       },
       {
         name: '`/add_faction` — Host',
-        value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:USSR, China, Mongolia`',
+        value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:*USSR, China, Mongolia`\n\nPrefix any country with `*` to mark it as Major — it shows as 🟡 in the embed and requires an approved Major role to claim.',
       },
       {
         name: '`/add_preset_players` — Host',
