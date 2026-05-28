@@ -141,7 +141,7 @@ async function fireListExpiry(client, gameId) {
     delete games[gameId];
     save(GAMES_FILE, games);
     try {
-      const ch = await client.channels.fetch(g.channelId);
+      const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
         .setTitle('🗑️ List Automatically Deleted')
         .setDescription(`**"${g.title}"** was deleted — the host didn't respond within 10 minutes of the list closing.`)
@@ -1191,7 +1191,7 @@ function setupHandpicker(client) {
       save(GAMES_FILE, games);
       try { await refreshMessage(client, gameId, game); } catch {}
       try {
-        const ch = await client.channels.fetch(game.channelId);
+        const ch = await client.channels.fetch('1508275084026974293');
         await ch.send({ embeds: [new EmbedBuilder()
           .setTitle('🔓 List Reopened')
           .setDescription(`**"${game.title}"** is open again — players can claim countries.`)
@@ -1222,7 +1222,7 @@ function setupHandpicker(client) {
     scheduleListExpiry(client, gameId);
     try { await refreshMessage(client, gameId, game); } catch {}
     try {
-      const ch = await client.channels.fetch(game.channelId);
+      const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
         .setTitle('⏱️ List Extended')
         .setDescription(`**"${game.title}"** is open again for **${raw}**.\nNew deadline: <t:${Math.floor(game.listExpiryAt / 1000)}:R>`)
