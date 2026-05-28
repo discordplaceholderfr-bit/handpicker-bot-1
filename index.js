@@ -6,6 +6,7 @@ const { setupPresets, presetCommands } = require('./presets');
 const { setupTeams, teamCommands } = require('./teams');
 const { setupImporter, importerCommands } = require('./importer');
 const { setupWatcher, watcherCommands } = require('./pollwatcher');
+const { setupGuide, guideCommands } = require('./guide');
 
 process.setMaxListeners(100);
 
@@ -33,6 +34,7 @@ client.once('clientReady', async (readyClient) => {
     ...teamCommands,
     ...importerCommands,
     ...watcherCommands,
+    ...guideCommands,
   ];
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -76,5 +78,6 @@ setupPresets(client);
 setupTeams(client);
 setupImporter(client);
 setupWatcher(client);
+setupGuide(client);
 
 client.login(process.env.DISCORD_TOKEN);
