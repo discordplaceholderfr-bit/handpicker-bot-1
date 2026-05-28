@@ -505,7 +505,7 @@ function setupPresets(client) {
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('faction_countries').setLabel('Countries (comma-separated)').setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Germany, France, Italy').setRequired(true).setMaxLength(2000)
+            .setPlaceholder('Germany, *Prussia, Italy  ← prefix * to make a country Major').setRequired(true).setMaxLength(2000)
         ),
       );
       return interaction.showModal(modal);
@@ -529,7 +529,7 @@ function setupPresets(client) {
           const modal = new ModalBuilder().setCustomId(`edit_preset_add_countries_modal__${userId}`).setTitle(`Add Countries — ${factions[0]}`);
           modal.addComponents(new ActionRowBuilder().addComponents(
             new TextInputBuilder().setCustomId('new_countries').setLabel('Countries to add (comma-separated)').setStyle(TextInputStyle.Paragraph)
-              .setPlaceholder('Spain, Portugal, Morocco').setRequired(true).setMaxLength(2000)
+              .setPlaceholder('Spain, *Portugal, Morocco  ← prefix * to make a country Major').setRequired(true).setMaxLength(2000)
           ));
           return interaction.showModal(modal);
         }
