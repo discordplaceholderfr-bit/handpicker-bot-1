@@ -259,22 +259,22 @@ const handpickerCommands = [
     .setDescription('Create a new handpick list with title and factions')
     .addStringOption(o => o.setName('title').setDescription('Title of the handpick list').setRequired(true))
     .addStringOption(o => o.setName('faction1_name').setDescription('First faction name (e.g. Axis)').setRequired(true))
-    .addStringOption(o => o.setName('faction1_countries').setDescription('Comma-separated countries for faction 1').setRequired(true))
+    .addStringOption(o => o.setName('faction1_countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(true))
     .addStringOption(o => o.setName('faction2_name').setDescription('Second faction name (e.g. Allies)').setRequired(false))
-    .addStringOption(o => o.setName('faction2_countries').setDescription('Comma-separated countries for faction 2').setRequired(false))
+    .addStringOption(o => o.setName('faction2_countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(false))
     .addStringOption(o => o.setName('faction3_name').setDescription('Third faction name').setRequired(false))
-    .addStringOption(o => o.setName('faction3_countries').setDescription('Comma-separated countries for faction 3').setRequired(false))
+    .addStringOption(o => o.setName('faction3_countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(false))
     .addStringOption(o => o.setName('faction4_name').setDescription('Fourth faction name').setRequired(false))
-    .addStringOption(o => o.setName('faction4_countries').setDescription('Comma-separated countries for faction 4').setRequired(false))
+    .addStringOption(o => o.setName('faction4_countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(false))
     .addStringOption(o => o.setName('faction5_name').setDescription('Fifth faction name').setRequired(false))
-    .addStringOption(o => o.setName('faction5_countries').setDescription('Comma-separated countries for faction 5').setRequired(false))
+    .addStringOption(o => o.setName('faction5_countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(false))
     .toJSON(),
 
   new SlashCommandBuilder()
     .setName('add_faction')
     .setDescription('Add a faction to the handpick list')
     .addStringOption(o => o.setName('name').setDescription('Faction name').setRequired(true))
-    .addStringOption(o => o.setName('countries').setDescription('Comma-separated countries').setRequired(true))
+    .addStringOption(o => o.setName('countries').setDescription('Comma-separated countries. Prefix with * for Major (e.g. *Prussia)').setRequired(true))
     .toJSON(),
 
   new SlashCommandBuilder()

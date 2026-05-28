@@ -19,7 +19,12 @@ function parseHandpickText(raw) {
   // Step 1: clean and split into lines
   const lines = raw
     .split('\n')
-    .map(l => l.replace(/\*\*/g,'').replace(/__/g,'').replace(/[_*~`]/g,'').trim())
+    .map(l => {
+      // Strip markdown formatting but preserve a leading * (Major country prefix)
+      const hasMajor = /^\*[^*]/.test(l.trim());
+      const cleaned  = l.replace(/\*\*/g,'').replace(/__/g,'').replace(/[_~`]/g,'').replace(/\*/g,'').trim();
+      return hasMajor ? `*${cleaned}` : cleaned;
+    })
     .filter(l => l.length > 0);
 
   // Step 2: handle multiple "Country: Player Country2: Player2" on one line.
@@ -109,7 +114,7 @@ function parseHandpickText(raw) {
 const importerCommands = [
   new SlashCommandBuilder()
     .setName('import_handpick')
-    .setDescription('Paste a handpick list as text and the bot creates it automatically')
+    .setDescription('Paste a handpick list as text. Prefix countries with * for Major (e.g. *Prussia)')
     .toJSON(),
 ];
 
