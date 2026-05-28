@@ -517,6 +517,12 @@ function setupHandpicker(client) {
         const match = faction.countries.find(c => c.toLowerCase() === country.toLowerCase());
         if (match) {
           if (faction.claims[match]) return interaction.reply({ content: `❌ **${match}** is already claimed.`, ephemeral: true });
+          // Major country check
+          if (match.startsWith('*')) {
+            const approvedRoles = majorRoles[guildId] || [];
+            const hasMajorRole  = approvedRoles.length > 0 && approvedRoles.some(r => interaction.member.roles.cache.has(r));
+            if (!hasMajorRole) return interaction.reply({ content: `❌ **${match}** is a **Major** country and is restricted to players with an approved Major role.`, ephemeral: true });
+          }
           faction.claims[match] = userId;
           claimedName = match;
           break;
@@ -879,6 +885,12 @@ function setupHandpicker(client) {
       }
     }
     if (faction.claims[country]) return interaction.reply({ content: `❌ **${country}** was just claimed by someone else!`, ephemeral: true });
+    // Major country check
+    if (country.startsWith('*')) {
+      const approvedRoles = majorRoles[guildId] || [];
+      const hasMajorRole  = approvedRoles.length > 0 && approvedRoles.some(r => interaction.member.roles.cache.has(r));
+      if (!hasMajorRole) return interaction.reply({ content: `❌ **${country}** is a **Major** country and is restricted to players with an approved Major role.`, ephemeral: true });
+    }
     faction.claims[country] = userId;
     save(GAMES_FILE, games);
     await interaction.update({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });

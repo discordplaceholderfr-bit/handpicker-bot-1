@@ -29,7 +29,7 @@ const CATEGORIES = {
       },
       {
         name: '⭐ Majors — controlling who claims big countries',
-        value: 'Countries with "Major" in their name can be restricted to approved roles only. Use `/major_role role:@Role` to toggle a role on/off the approved list. Players without an approved role can\'t claim those countries.',
+        value: 'Any country whose name starts with `*` (e.g. `*Prussia`) is a Major country, locked behind approved roles. Use `/major_role role:@Role` to toggle a role on/off the approved list. Players without an approved role get blocked when they try to claim one.',
       },
       {
         name: '📬 When does the bot DM you?',
@@ -185,8 +185,12 @@ const CATEGORIES = {
     color: 0xff9900,
     fields: [
       {
+        name: 'How Major countries work',
+        value: 'Any country whose name starts with `*` is treated as a **Major** country. Major countries are locked behind approved roles — players without one get blocked when they try to claim.\n\n**Example list entry:** `*Prussia`, `*Austria`, `*France`\n\nThe `*` stays visible in the embed so players know at a glance which countries require a Major role.',
+      },
+      {
         name: '`/major_role` — Host',
-        value: 'Toggle a Discord role\'s permission to claim **Major** countries. Any country with the word **Major** in its name is treated as restricted — only players holding an approved role can claim it. Players without an approved role get an error if they try.\n\nRun the command on a role to **add** it to the approved list. Run it again on the same role to **remove** it.\n\n**Example:**\n`/major_role role:@Veteran` — adds Veteran to the approved list.\nRun again → removes it.\n\nThere is no limit on how many roles you can approve.',
+        value: 'Toggle a Discord role\'s permission to claim `*` Major countries. Run it on a role to **add** it to the approved list. Run it again on the same role to **remove** it.\n\n**Example:**\n`/major_role role:@Veteran` — Veteran players can now claim `*` countries.\nRun again → removes that permission.\n\nNo limit on how many roles you can approve. If no roles are approved at all, Major countries are claimable by anyone.',
       },
     ],
   },
