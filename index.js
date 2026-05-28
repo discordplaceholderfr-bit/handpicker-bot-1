@@ -55,21 +55,84 @@ client.once('clientReady', async (readyClient) => {
   }
 });
 
-// ── Make all command replies public and auto-delete confirmations ─────────────
+// ── Message expiry tracker ────────────────────────────────────────────────────
+// Tracks interactive messages (with components) so they auto-delete after 5
+// minutes of no interaction. Handpick list embeds are excluded — they use the
+// 3-hour game reset timer instead.
+const messageTimers = new Map();
+const COMMAND_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const FINAL_DELETE_MS   = 12 * 1000;     // 12 seconds for final/no-component replies
+
+// Returns true if the components belong to an actual handpick list embed
+// (identified by claim__ or unclaim__ customIds — those are managed separately)
+function isHandpickList(components) {
+  if (!components?.length) return false;
+  try {
+    const json = JSON.stringify(components);
+    return json.includes('"unclaim__') || json.includes('"claim__');
+  } catch { return false; }
+}
+
+// Arm or reset the 5-minute expiry timer for a message
+function armExpiry(msgId, deleteFn) {
+  const existing = messageTimers.get(msgId);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    messageTimers.delete(msgId);
+    deleteFn();
+  }, COMMAND_EXPIRY_MS);
+  messageTimers.set(msgId, timer);
+}
+
+// Cancel the expiry timer for a message (used when it transitions to a final state)
+function cancelExpiry(msgId) {
+  const existing = messageTimers.get(msgId);
+  if (existing) { clearTimeout(existing); messageTimers.delete(msgId); }
+}
+
+// ── Patch interaction.reply and interaction.update ────────────────────────────
 client.on('interactionCreate', interaction => {
+  // ── Patch reply ─────────────────────────────────────────────────────────────
   const _reply = interaction.reply?.bind(interaction);
-  if (!_reply) return;
-  interaction.reply = async (opts) => {
-    const options = typeof opts === 'string' ? { content: opts } : { ...opts };
-    delete options.ephemeral;
-    let msg;
-    try { msg = await _reply({ ...options, fetchReply: true }); } catch { return; }
-    // Only auto-delete if the reply has no buttons/dropdowns (i.e. it's a final confirmation)
-    if (!options.components?.length) {
-      setTimeout(() => msg?.delete?.().catch(() => {}), 12000);
-    }
-    return msg;
-  };
+  if (_reply) {
+    interaction.reply = async (opts) => {
+      const options = typeof opts === 'string' ? { content: opts } : { ...opts };
+      delete options.ephemeral;
+      let msg;
+      try { msg = await _reply({ ...options, fetchReply: true }); } catch { return; }
+
+      if (!options.components?.length) {
+        // No components — final reply, delete after 12s
+        setTimeout(() => msg?.delete?.().catch(() => {}), FINAL_DELETE_MS);
+      } else if (!isHandpickList(options.components)) {
+        // Interactive command message — arm 5-min expiry
+        armExpiry(msg.id, () => msg.delete().catch(() => {}));
+      }
+      return msg;
+    };
+  }
+
+  // ── Patch update (component interactions only) ──────────────────────────────
+  const _update = interaction.update?.bind(interaction);
+  if (_update) {
+    interaction.update = async (opts) => {
+      const options = typeof opts === 'string' ? { content: opts } : { ...opts };
+      const prevMsgId = interaction.message?.id;
+      let msg;
+      try { msg = await _update({ ...options, fetchReply: true }); } catch { return; }
+
+      if (!options.components?.length) {
+        // Reached final state — cancel old timer, delete after 12s
+        if (prevMsgId) cancelExpiry(prevMsgId);
+        setTimeout(() => msg?.delete?.().catch(() => {}), FINAL_DELETE_MS);
+      } else if (!isHandpickList(options.components)) {
+        // Still interactive — reset the 5-min timer on the same message
+        const msgId = msg?.id || prevMsgId;
+        if (msgId) armExpiry(msgId, () => msg?.delete?.().catch(() => {}));
+      }
+      return msg;
+    };
+  }
 });
 
 setupHandpicker(client);
