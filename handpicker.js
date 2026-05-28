@@ -71,14 +71,12 @@ function scheduleGameReset(client, gameId) {
     save(GAMES_FILE, games);
     console.log(`Auto-reset: deleted game ${gameId}`);
     try {
-      if (g.channelId) {
-        const ch = await client.channels.fetch(g.channelId);
-        await ch.send({ embeds: [new EmbedBuilder()
-          .setTitle('⏰ Handpick List Expired')
-          .setDescription(`**"${g.title}"** has been automatically reset after 3 hours.`)
-          .setColor(0xff9900).setTimestamp()
-        ]});
-      }
+      const ch = await client.channels.fetch('1508275084026974293');
+      await ch.send({ embeds: [new EmbedBuilder()
+        .setTitle('⏰ Handpick List Expired')
+        .setDescription(`**"${g.title}"** has been automatically reset after 3 hours.`)
+        .setColor(0xff9900).setTimestamp()
+      ]});
     } catch {}
   }, remaining);
 }
