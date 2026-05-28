@@ -48,7 +48,7 @@ const CATEGORIES = {
       },
       {
         name: '`/import_handpick` — Host',
-        value: 'Import a list by pasting formatted text into a popup instead of typing every country as a command option. Best used when you already have the list written out somewhere.\n\n**Format:**\n```\n[Faction Name]\nCountry 1\nCountry 2\n\n[Another Faction]\nCountry 3\n```',
+        value: 'Import a list by pasting formatted text into a popup instead of typing every country as a command option. Best used when you already have the list written out somewhere.\n\n**Format:**\n```\n[Faction Name]\n*Prussia\nCountry 2\n\n[Another Faction]\nCountry 3\n```\nPrefix any country with `*` to mark it as Major — it displays as 🟡 in the embed and requires an approved Major role to claim.',
       },
       {
         name: '`/add_faction` — Host',
@@ -98,7 +98,7 @@ const CATEGORIES = {
       },
       {
         name: '`/edit_preset` — Host',
-        value: 'Edit a saved preset without deploying it. Pick the preset then choose an action:\n• **Rename Title** — change the stored list title\n• **Add Countries** — append new countries to a faction (comma-separated)\n• **Remove Countries** — multi-select which countries to remove from a faction\n• **Add New Faction** — create a new faction with a name and countries\n• **Remove Faction** — delete an entire faction from the preset',
+        value: 'Edit a saved preset without deploying it. Pick the preset then choose an action:\n• **Rename Title** — change the stored list title\n• **Add Countries** — append new countries to a faction (comma-separated). Prefix with `*` to make them Major (e.g. `*Prussia, France`)\n• **Remove Countries** — multi-select which countries to remove from a faction\n• **Add New Faction** — create a new faction with a name and countries. Prefix any country with `*` to mark it as Major\n• **Remove Faction** — delete an entire faction from the preset',
       },
       {
         name: '`/list_presets` · `/preview_preset`',
