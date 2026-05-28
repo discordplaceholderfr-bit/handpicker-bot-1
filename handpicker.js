@@ -288,7 +288,8 @@ const handpickerCommands = [
 
   new SlashCommandBuilder()
     .setName('remove_player')
-    .setDescription('Admin: Remove a player\'s claim from the current list')
+    .setDescription('Admin: Remove a player\'s claim from the most recent list')
+    .addUserOption(o => o.setName('user').setDescription('Player to remove — skips the dropdown').setRequired(false))
     .toJSON(),
 
   new SlashCommandBuilder()
@@ -544,10 +545,30 @@ function setupHandpicker(client) {
       const recent = mostRecentGuildGame(guildId);
       if (!recent) return interaction.reply({ content: '❌ No active handpick lists.', ephemeral: true });
       const [gameId, game] = recent;
+
+      // If a user was provided, remove their claim directly without a dropdown
+      const targetUser = interaction.options.getUser('user');
+      if (targetUser) {
+        let foundCountry = null, foundFaction = null;
+        for (const [factionName, faction] of Object.entries(game.factions)) {
+          for (const [country, uid] of Object.entries(faction.claims || {})) {
+            if (uid === targetUser.id) { foundCountry = country; foundFaction = factionName; break; }
+          }
+          if (foundCountry) break;
+        }
+        if (!foundCountry) return interaction.reply({ content: `❌ <@${targetUser.id}> has no claim in **${game.title}**.`, ephemeral: true });
+        delete game.factions[foundFaction].claims[foundCountry];
+        save(GAMES_FILE, games);
+        if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUser.id, foundFaction).catch(() => {}); }
+        await refreshMessage(client, gameId, game);
+        return interaction.reply({ content: `✅ Removed <@${targetUser.id}>'s claim on **${foundCountry}** (${foundFaction}).` });
+      }
+
+      // No user provided — show dropdown of all claims
       const options = [];
       for (const [factionName, faction] of Object.entries(game.factions)) {
         for (const [country, userId] of Object.entries(faction.claims || {})) {
-          options.push({ label: country.slice(0, 100), description: `${factionName} · ${userId}`.slice(0, 100), value: `${gameId}|||${factionName}|||${country}|||${userId}` });
+          options.push({ label: country.slice(0, 100), description: `${factionName} · <@${userId}>`.slice(0, 100), value: `${gameId}|||${factionName}|||${country}|||${userId}` });
         }
       }
       if (options.length === 0) return interaction.reply({ content: '❌ No claims to remove.', ephemeral: true });

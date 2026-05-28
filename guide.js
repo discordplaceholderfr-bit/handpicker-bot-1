@@ -48,7 +48,7 @@ const CATEGORIES = {
       },
       {
         name: '`/remove_player` — Admin',
-        value: 'Remove a specific player\'s claim via dropdown. Shows every claimed country with the faction and player. The country returns to unclaimed.\n\n**Use case:** A player claims the wrong country or drops out.',
+        value: 'Remove a player\'s claim from the most recent list. Two ways to use it:\n\n**Tag the player directly (fastest):**\n`/remove_player user:@Player` — finds their claim automatically and removes it in one step.\n\n**No user provided:**\nShows a dropdown of every claimed country so you can pick which one to remove.\n\nEither way the country returns to unclaimed and their team role is removed.',
       },
       {
         name: '`/swap` — Anyone',
