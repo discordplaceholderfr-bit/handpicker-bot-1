@@ -63,8 +63,17 @@ const messageTimers = new Map();
 const COMMAND_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const FINAL_DELETE_MS   = 12 * 1000;     // 12 seconds for final/no-component replies
 
-// Returns true if the components belong to an actual handpick list embed
-// (identified by claim__ or unclaim__ customIds — those are managed separately)
+// Returns true if the message should be treated as a persistent embed
+// (handpick lists identified by claim__/unclaim__ customIds, or watcher active embeds)
+function isPersistentEmbed(options) {
+  if (isHandpickList(options?.components)) return true;
+  const embeds = options?.embeds || [];
+  return embeds.some(e => {
+    const title = e?.data?.title ?? e?.title ?? '';
+    return title.includes('Watcher Active');
+  });
+}
+
 function isHandpickList(components) {
   if (!components?.length) return false;
   try {
@@ -101,10 +110,12 @@ client.on('interactionCreate', interaction => {
       let msg;
       try { msg = await _reply({ ...options, fetchReply: true }); } catch { return; }
 
-      if (!options.components?.length) {
+      if (isPersistentEmbed(options)) {
+        // Persistent embed (handpick list or watcher active) — no auto-delete
+      } else if (!options.components?.length) {
         // No components — final reply, delete after 12s
         setTimeout(() => msg?.delete?.().catch(() => {}), FINAL_DELETE_MS);
-      } else if (!isHandpickList(options.components)) {
+      } else {
         // Interactive command message — arm 5-min expiry
         armExpiry(msg.id, () => msg.delete().catch(() => {}));
       }
@@ -121,11 +132,14 @@ client.on('interactionCreate', interaction => {
       let msg;
       try { msg = await _update({ ...options, fetchReply: true }); } catch { return; }
 
-      if (!options.components?.length) {
+      if (isPersistentEmbed(options)) {
+        // Persistent embed (handpick list or watcher active) — cancel any old timer, no auto-delete
+        if (prevMsgId) cancelExpiry(prevMsgId);
+      } else if (!options.components?.length) {
         // Reached final state — cancel old timer, delete after 12s
         if (prevMsgId) cancelExpiry(prevMsgId);
         setTimeout(() => msg?.delete?.().catch(() => {}), FINAL_DELETE_MS);
-      } else if (!isHandpickList(options.components)) {
+      } else {
         // Still interactive — reset the 5-min timer on the same message
         const msgId = msg?.id || prevMsgId;
         if (msgId) armExpiry(msgId, () => msg?.delete?.().catch(() => {}));
