@@ -106,7 +106,12 @@ client.on('interactionCreate', interaction => {
   if (_reply) {
     interaction.reply = async (opts) => {
       const options = typeof opts === 'string' ? { content: opts } : { ...opts };
-      delete options.ephemeral;
+
+      // Ephemeral replies are user-only and auto-dismiss — pass through untouched
+      if (options.ephemeral) {
+        try { return await _reply(options); } catch { return; }
+      }
+
       let msg;
       try { msg = await _reply({ ...options, fetchReply: true }); } catch { return; }
 
