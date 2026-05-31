@@ -546,7 +546,6 @@ function setupWatcher(client) {
       return interaction.reply({
         content: `📋 Which preset should be posted when **${threshold}** ${type === 'reaction' ? `${emoji} reactions` : 'poll votes'} are reached?`,
         components: [row],
-        ephemeral: true,
       });
     }
 
@@ -584,7 +583,6 @@ function setupWatcher(client) {
           .setFooter({ text: 'Logged to #homage-poll-log' })
           .setTimestamp()
         ],
-        ephemeral: true,
       });
     }
 
@@ -633,7 +631,7 @@ function setupWatcher(client) {
             .setPlaceholder('Choose an exclusion to remove...')
             .addOptions(opts)
         );
-        return interaction.reply({ content: `🗑️ **"${watcher.presetName}"** — which exclusion do you want to remove?`, components: [row], ephemeral: true });
+        return interaction.reply({ content: `🗑️ **"${watcher.presetName}"** — which exclusion do you want to remove?`, components: [row] });
       }
 
       // Multiple watchers with exclusions → pick watcher first
@@ -648,7 +646,7 @@ function setupWatcher(client) {
           .setPlaceholder('Choose a watcher...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: '🗑️ Which watcher do you want to remove an exclusion from?', components: [row], ephemeral: true });
+      return interaction.reply({ content: '🗑️ Which watcher do you want to remove an exclusion from?', components: [row] });
     }
 
     // ── /reset_watcher ──────────────────────────────────────────────────────
@@ -665,7 +663,7 @@ function setupWatcher(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_watcher__${guildId}`).setLabel(`Yes, delete all ${guildWatchers.length} watcher(s)`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset_watcher').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
     }
 
     // ── /delay_watcher ──────────────────────────────────────────────────────

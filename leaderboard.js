@@ -257,7 +257,7 @@ function setupLeaderboard(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_rankings__${guildId}`).setLabel('Yes, wipe it').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
     }
   });
 

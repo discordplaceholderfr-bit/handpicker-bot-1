@@ -245,7 +245,7 @@ function setupPresets(client) {
           .setPlaceholder('Choose a preset to edit...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: '✏️ Which preset do you want to edit?', components: [row], ephemeral: true });
+      return interaction.reply({ content: '✏️ Which preset do you want to edit?', components: [row] });
     }
 
     // ── /reset_presets ────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ function setupPresets(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_presets__${guildId}`).setLabel(`Yes, delete all ${count} preset${count !== 1 ? 's' : ''}`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
     }
   });
 
@@ -621,7 +621,7 @@ function setupPresets(client) {
       preset.title   = newTitle;
       delete pendingEdits[userId];
       savePresets(presets);
-      return interaction.reply({ content: `✅ Preset **"${edit.presetName}"** title updated to **"${newTitle}"**.`, ephemeral: true });
+      return interaction.reply({ content: `✅ Preset **"${edit.presetName}"** title updated to **"${newTitle}"**.` });
     }
 
     if (interaction.customId.startsWith('edit_preset_add_countries_modal__')) {
@@ -644,7 +644,7 @@ function setupPresets(client) {
       savePresets(presets);
       let msg = `✅ Added **${added.length}** country(ies) to **${edit.factionName}** in **"${edit.presetName}"**.`;
       if (skipped.length > 0) msg += `\n⚠️ Skipped (already exist): ${skipped.join(', ')}`;
-      return interaction.reply({ content: msg, ephemeral: true });
+      return interaction.reply({ content: msg });
     }
 
     if (interaction.customId.startsWith('edit_preset_add_faction_modal__')) {
@@ -661,7 +661,7 @@ function setupPresets(client) {
       preset.factions[factionName] = { countries };
       delete pendingEdits[userId];
       savePresets(presets);
-      return interaction.reply({ content: `✅ Faction **${factionName}** (${countries.length} countries) added to preset **"${edit.presetName}"**.`, ephemeral: true });
+      return interaction.reply({ content: `✅ Faction **${factionName}** (${countries.length} countries) added to preset **"${edit.presetName}"**.` });
     }
   });
 }
