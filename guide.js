@@ -21,7 +21,7 @@ const CATEGORIES = {
       },
       {
         name: '📊 Poll Watcher — hands-free list posting',
-        value: 'Set up with `/setup_watcher` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.',
+        value: 'Set up with `/setup_watcher` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.\n\nAlternatively, use `/schedule_event` to skip the poll entirely — players RSVP directly on the event embed and the list fires automatically when the cap is hit or the event time arrives.',
       },
       {
         name: '🚫 Restrictions — keeping the count clean',
@@ -53,6 +53,14 @@ const CATEGORIES = {
       {
         name: '`/add_faction` — Host',
         value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:*USSR, China, Mongolia`\n\nPrefix any country with `*` to mark it as Major — it shows as 🔸 in the embed and requires an approved Major role to claim.',
+      },
+      {
+        name: '`/schedule_event` — Host',
+        value: 'Schedule an event with an RSVP embed. Players click **Join** to sign up — the embed updates live with the count. When the cap is hit (or the event time arrives), the bot automatically posts the linked preset as a handpick list.\n\n**Required:**\n• `title` — event name\n• `datetime` — format: `YYYY-MM-DD HH:MM` (e.g. `2025-06-15 20:00`)\n\n**Optional:**\n• `cap` — player cap; fires the list the instant it\'s reached\n• `preset` — preset to post as a handpick list when the event fires\n• `min_players` — auto-cancels the event if not reached by start time\n• `warning_minutes` — sends a ping X min before start\n• `list_expiry` — minutes before the posted list locks for claiming\n• `ping_role` — role to ping when the list fires\n• `description` — shown in the event embed\n\n**Example:**\n`/schedule_event title:Siege of Vienna datetime:2025-06-15 20:00 cap:20 preset:WW2 Europe warning_minutes:30`',
+      },
+      {
+        name: '`/cancel_event` · `/list_events` — Host',
+        value: '`/cancel_event` — Cancel an active event via dropdown. Everyone who joined gets a DM notification.\n`/list_events` — Show all upcoming events with times and RSVP counts.',
       },
       {
         name: '`/add_preset_players` — Host',
