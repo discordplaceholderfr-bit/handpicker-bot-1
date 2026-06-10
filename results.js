@@ -66,12 +66,12 @@ async function parseResultsText(text, guild) {
     if (mvpMatch) {
       if (current) {
         const ids = await Promise.all(mvpMatch[1].split(',').map(s => resolveUserId(s, guild)));
-        current.mvps = ids.filter(Boolean);
+        current.mvps = ids.filter(Boolean).slice(0, 1);
       }
     } else if (hmMatch) {
       if (current) {
         const ids = await Promise.all(hmMatch[1].split(',').map(s => resolveUserId(s, guild)));
-        current.hms = ids.filter(Boolean);
+        current.hms = ids.filter(Boolean).slice(0, 3);
       }
     } else {
       if (current) factions.push(current);
@@ -109,6 +109,28 @@ const resultsCommands = [
     .toJSON(),
 
   new SlashCommandBuilder()
+    .setName('testpost_results')
+    .setDescription('Host: Post event results using options instead of a popup (max 3 factions)')
+    .addStringOption(o => o.setName('event_name').setDescription('Name of the event').setRequired(true))
+    .addStringOption(o => o.setName('faction1_name').setDescription('First faction name').setRequired(true))
+    .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm1').setDescription('HM 1 of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm2').setDescription('HM 2 of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm3').setDescription('HM 3 of faction 1'))
+    .addStringOption(o => o.setName('faction2_name').setDescription('Second faction name'))
+    .addUserOption(o => o.setName('faction2_mvp').setDescription('MVP of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm1').setDescription('HM 1 of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm2').setDescription('HM 2 of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm3').setDescription('HM 3 of faction 2'))
+    .addStringOption(o => o.setName('faction3_name').setDescription('Third faction name'))
+    .addUserOption(o => o.setName('faction3_mvp').setDescription('MVP of faction 3'))
+    .addUserOption(o => o.setName('faction3_hm1').setDescription('HM 1 of faction 3'))
+    .addUserOption(o => o.setName('faction3_hm2').setDescription('HM 2 of faction 3'))
+    .addUserOption(o => o.setName('faction3_hm3').setDescription('HM 3 of faction 3'))
+    .addStringOption(o => o.setName('summary').setDescription('Brief summary (optional)'))
+    .toJSON(),
+
+  new SlashCommandBuilder()
     .setName('list_results')
     .setDescription('Show all saved event results for this server')
     .toJSON(),
@@ -140,6 +162,54 @@ function setupResults(client) {
     if (commandName === 'post_results') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       return interaction.showModal(buildModal('post_results_modal', 'Post Event Results'));
+    }
+
+    if (commandName === 'testpost_results') {
+      if (!isHost(interaction.member)) return denyHost(interaction);
+      await interaction.deferReply();
+
+      const eventName = interaction.options.getString('event_name');
+      const summary   = interaction.options.getString('summary') || '';
+      const factions  = [];
+
+      for (let i = 1; i <= 3; i++) {
+        const factionName = interaction.options.getString(`faction${i}_name`);
+        if (!factionName) continue;
+        const mvpUser = interaction.options.getUser(`faction${i}_mvp`);
+        const hm1User = interaction.options.getUser(`faction${i}_hm1`);
+        const hm2User = interaction.options.getUser(`faction${i}_hm2`);
+        const hm3User = interaction.options.getUser(`faction${i}_hm3`);
+        factions.push({
+          name: factionName,
+          mvps: [mvpUser?.id].filter(Boolean),
+          hms:  [hm1User?.id, hm2User?.id, hm3User?.id].filter(Boolean),
+        });
+      }
+
+      if (!factions.length) {
+        return interaction.editReply({ content: '❌ At least one faction is required.' });
+      }
+
+      if (!allResults[guildId]) allResults[guildId] = {};
+      for (const faction of factions) {
+        for (const uid of faction.mvps) awardMVP(guildId, uid, null, 1);
+        for (const uid of faction.hms)  awardHM(guildId, uid, null, 1);
+      }
+      const resultId = `result_${guildId}_${Date.now()}`;
+      allResults[guildId][resultId] = {
+        eventName, summary, factions,
+        createdAt:    Date.now(),
+        postedById:   interaction.user.id,
+        postedByName: interaction.user.username,
+      };
+      saveResults(allResults);
+      const msg = await interaction.editReply({ embeds: [buildResultEmbed(allResults[guildId][resultId])] });
+      if (msg) {
+        allResults[guildId][resultId].messageId = msg.id;
+        allResults[guildId][resultId].channelId = msg.channelId;
+        saveResults(allResults);
+      }
+      return;
     }
 
     if (commandName === 'list_results') {
@@ -195,7 +265,7 @@ function setupResults(client) {
     const factions    = await parseResultsText(resultsText, interaction.guild);
 
     if (!factions.length) {
-      return interaction.reply({ content: '❌ Could not parse any factions. Use the format:\n```\nFaction Name\nMVP: userId\nHM: userId\n```', ephemeral: true });
+      return interaction.reply({ content: '❌ Could not parse any factions. Use the format:\n```\nFaction Name\nMVP: @Jor\nHM: @Alice, @Bob, @Charlie\n```', ephemeral: true });
     }
 
     if (!allResults[guildId]) allResults[guildId] = {};
@@ -363,10 +433,10 @@ function buildModal(customId, title, eventName = '', summary = '', resultsText =
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId('results_text')
-        .setLabel('Results (Faction / MVP: id / HM: id)')
+        .setLabel('Results (1 MVP, up to 3 HMs per faction)')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
-        .setPlaceholder('Faction Name\nMVP: 123456789, 987654321\nHM: 111222333\n\nFaction 2\nMVP: 444555666\nHM: 777888999')
+        .setPlaceholder('Faction Name\nMVP: @Jor\nHM: @Alice, @Bob, @Charlie\n\nFaction 2\nMVP: @Dave\nHM: @Eve')
         .setValue(resultsText)
     ),
   );
