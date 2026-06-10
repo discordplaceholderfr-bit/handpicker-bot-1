@@ -53,8 +53,8 @@ async function resolveUserId(str, guild) {
 
 // Parse text like:
 //   Faction Name
-//   MVP: 123456, @Jor
-//   HM: @jor, 111222
+//   MVP: @Jor
+//   HM: @Alice, @Bob, @Charlie
 async function parseResultsText(text, guild) {
   const factions = [];
   let current = null;
@@ -79,7 +79,7 @@ async function parseResultsText(text, guild) {
     }
   }
   if (current) factions.push(current);
-  return factions.slice(0, 5);
+  return factions.slice(0, 2);
 }
 
 function buildResultEmbed(result) {
@@ -106,11 +106,6 @@ const resultsCommands = [
   new SlashCommandBuilder()
     .setName('post_results')
     .setDescription('Host: Post event results and auto-log MVPs/HMs to the leaderboard')
-    .toJSON(),
-
-  new SlashCommandBuilder()
-    .setName('testpost_results')
-    .setDescription('Host: Post event results using options instead of a popup (max 3 factions)')
     .addStringOption(o => o.setName('event_name').setDescription('Name of the event').setRequired(true))
     .addStringOption(o => o.setName('faction1_name').setDescription('First faction name').setRequired(true))
     .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
@@ -122,11 +117,6 @@ const resultsCommands = [
     .addUserOption(o => o.setName('faction2_hm1').setDescription('HM 1 of faction 2'))
     .addUserOption(o => o.setName('faction2_hm2').setDescription('HM 2 of faction 2'))
     .addUserOption(o => o.setName('faction2_hm3').setDescription('HM 3 of faction 2'))
-    .addStringOption(o => o.setName('faction3_name').setDescription('Third faction name'))
-    .addUserOption(o => o.setName('faction3_mvp').setDescription('MVP of faction 3'))
-    .addUserOption(o => o.setName('faction3_hm1').setDescription('HM 1 of faction 3'))
-    .addUserOption(o => o.setName('faction3_hm2').setDescription('HM 2 of faction 3'))
-    .addUserOption(o => o.setName('faction3_hm3').setDescription('HM 3 of faction 3'))
     .addStringOption(o => o.setName('summary').setDescription('Brief summary (optional)'))
     .toJSON(),
 
@@ -161,18 +151,13 @@ function setupResults(client) {
 
     if (commandName === 'post_results') {
       if (!isHost(interaction.member)) return denyHost(interaction);
-      return interaction.showModal(buildModal('post_results_modal', 'Post Event Results'));
-    }
-
-    if (commandName === 'testpost_results') {
-      if (!isHost(interaction.member)) return denyHost(interaction);
       await interaction.deferReply();
 
       const eventName = interaction.options.getString('event_name');
       const summary   = interaction.options.getString('summary') || '';
       const factions  = [];
 
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 2; i++) {
         const factionName = interaction.options.getString(`faction${i}_name`);
         if (!factionName) continue;
         const mvpUser = interaction.options.getUser(`faction${i}_mvp`);
@@ -251,13 +236,11 @@ function setupResults(client) {
     }
   });
 
-  // ── Modal submit ────────────────────────────────────────────────────────────
+  // ── Modal submit (edit_result only) ────────────────────────────────────────
   client.on('interactionCreate', async interaction => {
     if (!interaction.isModalSubmit()) return;
     const { customId, guildId } = interaction;
-    const isNew  = customId === 'post_results_modal';
-    const isEdit = customId.startsWith('edit_result_modal__');
-    if (!isNew && !isEdit) return;
+    if (!customId.startsWith('edit_result_modal__')) return;
 
     const eventName   = interaction.fields.getTextInputValue('event_name').trim();
     const summary     = interaction.fields.getTextInputValue('summary')?.trim() || '';
@@ -268,73 +251,47 @@ function setupResults(client) {
       return interaction.reply({ content: '❌ Could not parse any factions. Use the format:\n```\nFaction Name\nMVP: @Jor\nHM: @Alice, @Bob, @Charlie\n```', ephemeral: true });
     }
 
-    if (!allResults[guildId]) allResults[guildId] = {};
+    const resultId = customId.replace('edit_result_modal__', '');
+    const existing = allResults[guildId]?.[resultId];
+    if (!existing) return interaction.reply({ content: '❌ Result no longer exists.', ephemeral: true });
 
-    if (isNew) {
-      for (const faction of factions) {
-        for (const uid of faction.mvps) awardMVP(guildId, uid, null, 1);
-        for (const uid of faction.hms)  awardHM(guildId, uid, null, 1);
-      }
-      const resultId = `result_${guildId}_${Date.now()}`;
-      allResults[guildId][resultId] = {
-        eventName, summary, factions,
-        createdAt:     Date.now(),
-        postedById:    interaction.user.id,
-        postedByName:  interaction.user.username,
-      };
-      saveResults(allResults);
-      const msg = await interaction.reply({ embeds: [buildResultEmbed(allResults[guildId][resultId])] });
-      if (msg) {
-        allResults[guildId][resultId].messageId = msg.id;
-        allResults[guildId][resultId].channelId = msg.channelId;
-        saveResults(allResults);
-      }
-      return;
+    // Diff old vs new awards and adjust leaderboard
+    const countAwards = (factionList, type) => {
+      const map = {};
+      for (const f of factionList) for (const uid of f[type] || []) map[uid] = (map[uid] || 0) + 1;
+      return map;
+    };
+    const oldMVPs = countAwards(existing.factions, 'mvps');
+    const newMVPs = countAwards(factions, 'mvps');
+    const oldHMs  = countAwards(existing.factions, 'hms');
+    const newHMs  = countAwards(factions, 'hms');
+
+    for (const uid of new Set([...Object.keys(oldMVPs), ...Object.keys(newMVPs)])) {
+      const diff = (newMVPs[uid] || 0) - (oldMVPs[uid] || 0);
+      if (diff > 0) awardMVP(guildId, uid, null, diff);
+      if (diff < 0) removeMVP(guildId, uid, -diff);
+    }
+    for (const uid of new Set([...Object.keys(oldHMs), ...Object.keys(newHMs)])) {
+      const diff = (newHMs[uid] || 0) - (oldHMs[uid] || 0);
+      if (diff > 0) awardHM(guildId, uid, null, diff);
+      if (diff < 0) removeHM(guildId, uid, -diff);
     }
 
-    if (isEdit) {
-      const resultId = customId.replace('edit_result_modal__', '');
-      const existing = allResults[guildId]?.[resultId];
-      if (!existing) return interaction.reply({ content: '❌ Result no longer exists.', ephemeral: true });
+    existing.eventName = eventName;
+    existing.summary   = summary;
+    existing.factions  = factions;
+    saveResults(allResults);
 
-      // Diff old vs new awards and adjust leaderboard
-      const countAwards = (factionList, type) => {
-        const map = {};
-        for (const f of factionList) for (const uid of f[type] || []) map[uid] = (map[uid] || 0) + 1;
-        return map;
-      };
-      const oldMVPs = countAwards(existing.factions, 'mvps');
-      const newMVPs = countAwards(factions, 'mvps');
-      const oldHMs  = countAwards(existing.factions, 'hms');
-      const newHMs  = countAwards(factions, 'hms');
-
-      for (const uid of new Set([...Object.keys(oldMVPs), ...Object.keys(newMVPs)])) {
-        const diff = (newMVPs[uid] || 0) - (oldMVPs[uid] || 0);
-        if (diff > 0) awardMVP(guildId, uid, null, diff);
-        if (diff < 0) removeMVP(guildId, uid, -diff);
-      }
-      for (const uid of new Set([...Object.keys(oldHMs), ...Object.keys(newHMs)])) {
-        const diff = (newHMs[uid] || 0) - (oldHMs[uid] || 0);
-        if (diff > 0) awardHM(guildId, uid, null, diff);
-        if (diff < 0) removeHM(guildId, uid, -diff);
-      }
-
-      existing.eventName = eventName;
-      existing.summary   = summary;
-      existing.factions  = factions;
-      saveResults(allResults);
-
-      // Edit the original posted message in-place
-      if (existing.messageId && existing.channelId) {
-        try {
-          const ch  = await client.channels.fetch(existing.channelId);
-          const msg = await ch.messages.fetch(existing.messageId);
-          await msg.edit({ embeds: [buildResultEmbed(existing)] });
-        } catch { /* original message was deleted */ }
-      }
-
-      return interaction.reply({ content: '✅ Result updated and leaderboard adjusted.', ephemeral: true });
+    // Edit the original posted message in-place
+    if (existing.messageId && existing.channelId) {
+      try {
+        const ch  = await client.channels.fetch(existing.channelId);
+        const msg = await ch.messages.fetch(existing.messageId);
+        await msg.edit({ embeds: [buildResultEmbed(existing)] });
+      } catch { /* original message was deleted */ }
     }
+
+    return interaction.reply({ content: '✅ Result updated and leaderboard adjusted.', ephemeral: true });
   });
 
   // ── Dropdowns ───────────────────────────────────────────────────────────────
