@@ -291,13 +291,31 @@ function setupResults(client) {
       const parts    = interaction.customId.split('__');
       const guildId  = parts[1];
       const resultId = parts.slice(2).join('__');
+      const result   = allResults[guildId]?.[resultId];
+      if (result?.messageId && result?.channelId) {
+        try {
+          const ch  = await client.channels.fetch(result.channelId);
+          const msg = await ch.messages.fetch(result.messageId);
+          await msg.delete();
+        } catch { /* already deleted */ }
+      }
       delete allResults[guildId]?.[resultId];
       saveResults(allResults);
       return interaction.update({ content: '🗑️ Event result deleted.', embeds: [], components: [] });
     }
 
     if (interaction.customId.startsWith('confirm_reset_results__')) {
-      const guildId = interaction.customId.split('__')[1];
+      const guildId     = interaction.customId.split('__')[1];
+      const guildData   = allResults[guildId] || {};
+      for (const result of Object.values(guildData)) {
+        if (result.messageId && result.channelId) {
+          try {
+            const ch  = await client.channels.fetch(result.channelId);
+            const msg = await ch.messages.fetch(result.messageId);
+            await msg.delete();
+          } catch { /* already deleted */ }
+        }
+      }
       allResults[guildId] = {};
       saveResults(allResults);
       return interaction.update({ content: '🗑️ All event results wiped.', embeds: [], components: [] });
