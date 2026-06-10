@@ -29,7 +29,6 @@ function saveResults(data) {
 
 let allResults = loadResults();
 
-// Strip Discord mention formatting and leading @ to get a raw user ID
 function parseUserId(str) {
   const m = str.trim().match(/^<?@?!?(\d+)>?$/);
   return m ? m[1] : null;
@@ -39,9 +38,6 @@ function parseUserId(str) {
 //   Faction Name
 //   MVP: 123456, 789012
 //   HM: 111222
-//
-//   Another Faction
-//   MVP: 333444
 function parseResultsText(text) {
   const factions = [];
   let current = null;
@@ -65,20 +61,20 @@ function parseResultsText(text) {
 
 function buildResultEmbed(result) {
   const embed = new EmbedBuilder()
-    .setTitle(`🏁 ${result.eventName} has ended!`)
+    .setTitle(`${result.eventName} - Event Over`)
     .setColor(0x57f287)
     .setTimestamp(new Date(result.createdAt));
 
-  if (result.summary) embed.setDescription(`📝 ${result.summary}`);
-
   for (const faction of result.factions) {
-    const lines = [];
-    if (faction.mvps.length) lines.push(`⭐ **MVP:** ${faction.mvps.map(id => `<@${id}>`).join(', ')}`);
-    if (faction.hms.length)  lines.push(`🏅 **HM:** ${faction.hms.map(id => `<@${id}>`).join(', ')}`);
-    embed.addFields({ name: `🏴 ${faction.name}`, value: lines.join('\n') || '*No awards*' });
+    const mvpText = faction.mvps.length ? faction.mvps.map(id => `<@${id}>`).join(', ') : 'N/A';
+    const hmText  = faction.hms.length  ? faction.hms.map(id => `<@${id}>`).join(', ')  : 'N/A';
+    embed.addFields({ name: faction.name, value: `⭐ **MVP:** ${mvpText}\n🏅 **HM:** ${hmText}` });
   }
 
-  embed.setFooter({ text: `Posted by ${result.postedByName}` });
+  embed.addFields({ name: 'Host', value: `<@${result.postedById}>`, inline: true });
+
+  if (result.summary) embed.addFields({ name: 'Summary', value: result.summary });
+
   return embed;
 }
 
@@ -106,7 +102,7 @@ const resultsCommands = [
 
   new SlashCommandBuilder()
     .setName('edit_result')
-    .setDescription('Admin: Edit a saved event result (does not re-award leaderboard points)')
+    .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
     .toJSON(),
 ];
 
@@ -182,15 +178,25 @@ function setupResults(client) {
     if (!allResults[guildId]) allResults[guildId] = {};
 
     if (isNew) {
-      // Award MVPs and HMs
       for (const faction of factions) {
         for (const uid of faction.mvps) awardMVP(guildId, uid, null, 1);
         for (const uid of faction.hms)  awardHM(guildId, uid, null, 1);
       }
       const resultId = `result_${guildId}_${Date.now()}`;
-      allResults[guildId][resultId] = { eventName, summary, factions, createdAt: Date.now(), postedByName: interaction.user.username };
+      allResults[guildId][resultId] = {
+        eventName, summary, factions,
+        createdAt:     Date.now(),
+        postedById:    interaction.user.id,
+        postedByName:  interaction.user.username,
+      };
       saveResults(allResults);
-      return interaction.reply({ embeds: [buildResultEmbed(allResults[guildId][resultId])] });
+      const msg = await interaction.reply({ embeds: [buildResultEmbed(allResults[guildId][resultId])] });
+      if (msg) {
+        allResults[guildId][resultId].messageId = msg.id;
+        allResults[guildId][resultId].channelId = msg.channelId;
+        saveResults(allResults);
+      }
+      return;
     }
 
     if (isEdit) {
@@ -198,7 +204,7 @@ function setupResults(client) {
       const existing = allResults[guildId]?.[resultId];
       if (!existing) return interaction.reply({ content: '❌ Result no longer exists.', ephemeral: true });
 
-      // Diff old vs new awards and apply changes to the leaderboard
+      // Diff old vs new awards and adjust leaderboard
       const countAwards = (factionList, type) => {
         const map = {};
         for (const f of factionList) for (const uid of f[type] || []) map[uid] = (map[uid] || 0) + 1;
@@ -220,12 +226,21 @@ function setupResults(client) {
         if (diff < 0) removeHM(guildId, uid, -diff);
       }
 
-      existing.eventName    = eventName;
-      existing.summary      = summary;
-      existing.factions     = factions;
-      existing.editedByName = interaction.user.username;
+      existing.eventName = eventName;
+      existing.summary   = summary;
+      existing.factions  = factions;
       saveResults(allResults);
-      return interaction.reply({ content: '✅ Result updated and leaderboard adjusted.', embeds: [buildResultEmbed(existing)] });
+
+      // Edit the original posted message in-place
+      if (existing.messageId && existing.channelId) {
+        try {
+          const ch  = await client.channels.fetch(existing.channelId);
+          const msg = await ch.messages.fetch(existing.messageId);
+          await msg.edit({ embeds: [buildResultEmbed(existing)] });
+        } catch { /* original message was deleted */ }
+      }
+
+      return interaction.reply({ content: '✅ Result updated and leaderboard adjusted.', ephemeral: true });
     }
   });
 
