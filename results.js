@@ -29,16 +29,33 @@ function saveResults(data) {
 
 let allResults = loadResults();
 
-function parseUserId(str) {
-  const m = str.trim().match(/^<?@?!?(\d+)>?$/);
-  return m ? m[1] : null;
+// Resolve a user token to a Discord user ID.
+// Accepts: raw ID, <@id> mention, or @username / username (searched in guild).
+async function resolveUserId(str, guild) {
+  str = str.trim();
+  const idMatch = str.match(/^<?@?!?(\d+)>?$/);
+  if (idMatch) return idMatch[1];
+
+  // @name or plain name — search guild members
+  const query = str.replace(/^@/, '');
+  if (!query || !guild) return null;
+  try {
+    const members = await guild.members.search({ query, limit: 10 });
+    if (!members.size) return null;
+    const q = query.toLowerCase();
+    const exact = members.find(m =>
+      m.user.username.toLowerCase() === q ||
+      m.displayName.toLowerCase() === q
+    );
+    return (exact ?? members.first()).id;
+  } catch { return null; }
 }
 
 // Parse text like:
 //   Faction Name
-//   MVP: 123456, 789012
-//   HM: 111222
-function parseResultsText(text) {
+//   MVP: 123456, @Jor
+//   HM: @jor, 111222
+async function parseResultsText(text, guild) {
   const factions = [];
   let current = null;
   for (const rawLine of text.split('\n')) {
@@ -47,9 +64,15 @@ function parseResultsText(text) {
     const mvpMatch = line.match(/^mvp:\s*(.+)$/i);
     const hmMatch  = line.match(/^hm:\s*(.+)$/i);
     if (mvpMatch) {
-      if (current) current.mvps = mvpMatch[1].split(',').map(parseUserId).filter(Boolean);
+      if (current) {
+        const ids = await Promise.all(mvpMatch[1].split(',').map(s => resolveUserId(s, guild)));
+        current.mvps = ids.filter(Boolean);
+      }
     } else if (hmMatch) {
-      if (current) current.hms = hmMatch[1].split(',').map(parseUserId).filter(Boolean);
+      if (current) {
+        const ids = await Promise.all(hmMatch[1].split(',').map(s => resolveUserId(s, guild)));
+        current.hms = ids.filter(Boolean);
+      }
     } else {
       if (current) factions.push(current);
       current = { name: line, mvps: [], hms: [] };
@@ -169,7 +192,7 @@ function setupResults(client) {
     const eventName   = interaction.fields.getTextInputValue('event_name').trim();
     const summary     = interaction.fields.getTextInputValue('summary')?.trim() || '';
     const resultsText = interaction.fields.getTextInputValue('results_text');
-    const factions    = parseResultsText(resultsText);
+    const factions    = await parseResultsText(resultsText, interaction.guild);
 
     if (!factions.length) {
       return interaction.reply({ content: '❌ Could not parse any factions. Use the format:\n```\nFaction Name\nMVP: userId\nHM: userId\n```', ephemeral: true });
