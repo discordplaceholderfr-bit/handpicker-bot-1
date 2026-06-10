@@ -1,5 +1,5 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
-const { awardMVP, awardHM } = require('./leaderboard');
+const { awardMVP, awardHM, removeMVP, removeHM } = require('./leaderboard');
 
 const {
   SlashCommandBuilder,
@@ -194,15 +194,38 @@ function setupResults(client) {
     }
 
     if (isEdit) {
-      const resultId  = customId.replace('edit_result_modal__', '');
-      const existing  = allResults[guildId]?.[resultId];
+      const resultId = customId.replace('edit_result_modal__', '');
+      const existing = allResults[guildId]?.[resultId];
       if (!existing) return interaction.reply({ content: '❌ Result no longer exists.', ephemeral: true });
+
+      // Diff old vs new awards and apply changes to the leaderboard
+      const countAwards = (factionList, type) => {
+        const map = {};
+        for (const f of factionList) for (const uid of f[type] || []) map[uid] = (map[uid] || 0) + 1;
+        return map;
+      };
+      const oldMVPs = countAwards(existing.factions, 'mvps');
+      const newMVPs = countAwards(factions, 'mvps');
+      const oldHMs  = countAwards(existing.factions, 'hms');
+      const newHMs  = countAwards(factions, 'hms');
+
+      for (const uid of new Set([...Object.keys(oldMVPs), ...Object.keys(newMVPs)])) {
+        const diff = (newMVPs[uid] || 0) - (oldMVPs[uid] || 0);
+        if (diff > 0) awardMVP(guildId, uid, null, diff);
+        if (diff < 0) removeMVP(guildId, uid, -diff);
+      }
+      for (const uid of new Set([...Object.keys(oldHMs), ...Object.keys(newHMs)])) {
+        const diff = (newHMs[uid] || 0) - (oldHMs[uid] || 0);
+        if (diff > 0) awardHM(guildId, uid, null, diff);
+        if (diff < 0) removeHM(guildId, uid, -diff);
+      }
+
       existing.eventName    = eventName;
       existing.summary      = summary;
       existing.factions     = factions;
       existing.editedByName = interaction.user.username;
       saveResults(allResults);
-      return interaction.reply({ content: '✅ Result updated. *(Leaderboard points are unchanged — adjust manually with `/give_mvp` / `/remove_mvp` if needed.)*', embeds: [buildResultEmbed(existing)] });
+      return interaction.reply({ content: '✅ Result updated and leaderboard adjusted.', embeds: [buildResultEmbed(existing)] });
     }
   });
 

@@ -48,6 +48,18 @@ function awardHM(guildId, userId, username, amount = 1) {
   saveLB(lb);
   return user;
 }
+function removeMVP(guildId, userId, amount = 1) {
+  const user = getUser(guildId, userId, null);
+  user.mvps = Math.max(0, user.mvps - amount);
+  saveLB(lb);
+  return user;
+}
+function removeHM(guildId, userId, amount = 1) {
+  const user = getUser(guildId, userId, null);
+  user.hms = Math.max(0, user.hms - amount);
+  saveLB(lb);
+  return user;
+}
 
 // ─── Rankings embed with server statistics panel ──────────────────────────────
 function buildRankingsEmbed(guildId) {
@@ -334,4 +346,4 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
   });
 }
 
-module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM };
+module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM, removeMVP, removeHM };
