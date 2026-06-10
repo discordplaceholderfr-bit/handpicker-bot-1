@@ -389,6 +389,7 @@ const watcherCommands = [
     .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
     .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role when the handpick list is posted? (default: false)'))
+    .addStringOption(o => o.setName('slides').setDescription('Link to your slides (shown in the schedule embed)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
     .toJSON(),
 
@@ -465,6 +466,7 @@ function setupWatcher(client) {
       const expiresAt    = Date.now() + expireIn * 60 * 1000;
       const listExpiryMin    = interaction.options.getInteger('list_expiry')   ?? 15;
       const pingEvent        = interaction.options.getBoolean('ping_event')    ?? false;
+      const slidesLink       = interaction.options.getString('slides')         ?? null;
       const presetPlayersRaw = interaction.options.getString('preset_players') ?? '';
 
       // Parse "Nation: UserID; Nation: UserID" into an object
@@ -508,6 +510,7 @@ function setupWatcher(client) {
         listExpiryMs:  listExpiryMin * 60 * 1000,
         pingEvent,
         presetPlayers,
+        slidesLink,
       };
 
       // Show preset dropdown
@@ -769,6 +772,7 @@ function setupWatcher(client) {
         { name: '⏰ Deadline',       value: expiryText,                                                            inline: true },
         { name: '🔒 List Closes In', value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,      inline: true },
         { name: '👥 Preset Players', value: playerCount > 0 ? `${playerCount} pre-assigned` : 'None',             inline: true },
+        ...(pending.slidesLink ? [{ name: '📎 Slides', value: pending.slidesLink, inline: false }] : []),
       )
       .setFooter({ text: `ID: #${watcherId.slice(-6)} · Exclusion logs → #homage-poll-log · React ✅ to vote` })
       .setTimestamp();
