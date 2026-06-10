@@ -66,8 +66,8 @@ function scheduleWatcherAutoReset(client, watcherId) {
     try {
       const ch = await client.channels.fetch(w.channelId);
       await ch.send({ embeds: [new EmbedBuilder()
-        .setTitle('⏰ Watcher Expired')
-        .setDescription(`The watcher for **"${w.presetName}"** has been automatically removed after 3 hours.`)
+        .setTitle('⏰ Schedule Expired')
+        .setDescription(`The schedule for **"${w.presetName}"** has been automatically removed after 3 hours.`)
         .setColor(0xff9900).setTimestamp()
       ]});
     } catch {}
@@ -147,7 +147,7 @@ async function logExclusion(guild, watcher, watcherId, targetUser, reason, exclu
           { name: '🛡️ By',           value: `<@${excludedBy.id}>`,                                       inline: true },
           { name: '📋 Reason',        value: reason },
           { name: '🔗 Message',       value: `[Jump](https://discord.com/channels/${watcher.guildId}/${watcher.channelId}/${watcher.messageId})`, inline: true },
-          { name: '🆔 Watcher',       value: `#${watcherId.slice(-6)}`,                                  inline: true },
+          { name: '🆔 Schedule',       value: `#${watcherId.slice(-6)}`,                                  inline: true },
           { name: '📋 Preset',        value: watcher.presetName,                                          inline: true },
         )
         .setTimestamp()
@@ -537,7 +537,7 @@ function setupWatcher(client) {
     if (commandName === 'exclude_check') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w.posted && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active watchers in this server.', ephemeral: true });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.', ephemeral: true });
 
       const targetUser    = interaction.options.getUser('user');
       const reason        = interaction.options.getString('reason');
@@ -562,7 +562,7 @@ function setupWatcher(client) {
             { name: '👤 User',     value: `<@${targetUser.id}>`,                         inline: true },
             { name: '⏰ Expires',  value: `<t:${Math.floor(exclExpiresAt/1000)}:R>`,     inline: true },
             { name: '📋 Reason',   value: reason },
-            { name: '📋 Watchers', value: `Applied to all **${guildWatchers.length}** active watcher(s)` },
+            { name: '📋 Schedules', value: `Applied to all **${guildWatchers.length}** active schedule(s)` },
           )
           .setFooter({ text: 'Logged to #homage-poll-log' })
           .setTimestamp()
@@ -574,19 +574,19 @@ function setupWatcher(client) {
     if (commandName === 'list_schedules') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No watchers set up for this server.' });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.' });
       let desc = '';
       for (const [watcherId, w] of guildWatchers) {
         const status    = w.posted ? '✅ Posted' : w.triggered ? `⏳ Waiting ${w.delayMinutes}m...` : '👀 Watching';
         const exclCount = Object.keys(w.exclusions || {}).length;
         desc += `**#${watcherId.slice(-6)}** — ${status}\n`;
-        desc += `Preset: **"${w.presetName}"** · Type: \`${w.type}\`${w.type === 'reaction' ? ` (${w.emoji})` : ''}\n`;
-        desc += `Threshold: **${w.threshold}** · Delay: **${w.delayMinutes}m** · Posts to: <#${w.postChannelId}>\n`;
+        desc += `Preset: **"${w.presetName}"** · Threshold: **${w.threshold} ✅**\n`;
+        desc += `Delay: **${w.delayMinutes}m** · Posts to: <#${w.postChannelId}>\n`;
         if (exclCount > 0) desc += `Exclusions: **${exclCount}**\n`;
         desc += '\n';
       }
       return interaction.reply({
-        embeds: [new EmbedBuilder().setTitle('👀 Active Watchers').setDescription(desc.trim()).setColor(0x5865f2)],
+        embeds: [new EmbedBuilder().setTitle('📅 Active Schedules').setDescription(desc.trim()).setColor(0x5865f2)],
       });
     }
 
@@ -594,7 +594,7 @@ function setupWatcher(client) {
     if (commandName === 'remove_exclusion') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction); // vote exclusion — admin only
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active watchers in this server.', ephemeral: true });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.', ephemeral: true });
 
       // Find all watchers that have at least one exclusion
       const watchersWithExcl = guildWatchers.filter(([, w]) => Object.keys(w.exclusions || {}).length > 0);
@@ -627,24 +627,24 @@ function setupWatcher(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId(`remove_excl_watcher__${interaction.user.id}`)
-          .setPlaceholder('Choose a watcher...')
+          .setPlaceholder('Choose a schedule...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: '🗑️ Which watcher do you want to remove an exclusion from?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which schedule do you want to remove an exclusion from?', components: [row] });
     }
 
     // ── /reset_watcher ──────────────────────────────────────────────────────
     if (commandName === 'reset_schedule') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active watchers in this server.', ephemeral: true });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.', ephemeral: true });
 
       const confirmEmbed = new EmbedBuilder()
-        .setTitle('⚠️ Confirm Watcher Reset')
-        .setDescription(`Are you sure you want to **delete all ${guildWatchers.length} watcher(s)** for this server?\nThis will cancel any active countdowns and remove all watchers.\n\n**This cannot be undone.**`)
+        .setTitle('⚠️ Confirm Schedule Reset')
+        .setDescription(`Are you sure you want to **delete all ${guildWatchers.length} schedule(s)** for this server?\nThis will cancel any active countdowns and remove all schedules.\n\n**This cannot be undone.**`)
         .setColor(0xff4444);
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`confirm_reset_watcher__${guildId}`).setLabel(`Yes, delete all ${guildWatchers.length} watcher(s)`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
+        new ButtonBuilder().setCustomId(`confirm_reset_watcher__${guildId}`).setLabel(`Yes, delete all ${guildWatchers.length} schedule(s)`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset_watcher').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
       return interaction.reply({ embeds: [confirmEmbed], components: [row] });
@@ -656,7 +656,7 @@ function setupWatcher(client) {
       const minutes       = interaction.options.getInteger('minutes');
       const addMs         = minutes * 60 * 1000;
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending && !w.posted);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active watchers to delay.', ephemeral: true });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules to delay.', ephemeral: true });
 
       const applyDelay = (watcherId) => {
         const watcher = watchers[watcherId];
@@ -685,7 +685,7 @@ function setupWatcher(client) {
         if (watcher.expiresAt) parts.push('deadline');
         return interaction.reply({
           embeds: [new EmbedBuilder()
-            .setTitle('⏱️ Watcher Delayed')
+            .setTitle('⏱️ Schedule Delayed')
             .setDescription(`**"${watcher.presetName}"** — ${parts.join(' and ')} extended by **${minutes} minute(s)**.`)
             .setColor(0x5865f2).setTimestamp()
           ],
@@ -701,17 +701,17 @@ function setupWatcher(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId(`delay_watcher_pick__${interaction.user.id}`)
-          .setPlaceholder('Choose a watcher to delay...')
+          .setPlaceholder('Choose a schedule to delay...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: `⏱️ Which watcher do you want to delay by **${minutes} min**?`, components: [row], ephemeral: true });
+      return interaction.reply({ content: `⏱️ Which schedule do you want to delay by **${minutes} min**?`, components: [row], ephemeral: true });
     }
 
     // ── /remove_watcher ─────────────────────────────────────────────────────
     if (commandName === 'remove_schedule') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No watchers to remove.', ephemeral: true });
+      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules to remove.', ephemeral: true });
       const opts = guildWatchers.map(([watcherId, w]) => ({
         label:       `#${watcherId.slice(-6)} — ${w.presetName}`.slice(0, 100),
         description: `${w.type} · threshold ${w.threshold} · ${w.posted ? 'Posted' : w.triggered ? 'Triggered' : 'Watching'}`.slice(0, 100),
@@ -720,10 +720,10 @@ function setupWatcher(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId(`remove_watcher_pick__${interaction.user.id}`)
-          .setPlaceholder('Choose a watcher to remove...')
+          .setPlaceholder('Choose a schedule to remove...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: '🗑️ Which watcher do you want to remove?', components: [row], ephemeral: true });
+      return interaction.reply({ content: '🗑️ Which schedule do you want to remove?', components: [row], ephemeral: true });
     }
   });
 
@@ -759,7 +759,7 @@ function setupWatcher(client) {
     const expiryText  = pending.expiresAt ? `Expires <t:${Math.floor(pending.expiresAt / 1000)}:R>` : 'No deadline';
     const playerCount = Object.keys(pending.presetPlayers || {}).length;
     const watchEmbed  = new EmbedBuilder()
-      .setTitle('👀 Watcher Active!')
+      .setTitle('📅 Schedule Active!')
       .setColor(0x57f287)
       .addFields(
         { name: '📋 Preset',         value: `"${pending.presetName}"`,                                             inline: true },
@@ -881,7 +881,7 @@ function setupWatcher(client) {
     const watcher   = watchers[watcherId];
     const raw       = interaction.fields.getTextInputValue('custom_minutes');
     const minutes   = parseInt(raw);
-    if (!watcher)           return interaction.reply({ content: '❌ Watcher no longer exists.', ephemeral: true });
+    if (!watcher)           return interaction.reply({ content: '❌ Schedule no longer exists.', ephemeral: true });
     if (isNaN(minutes) || minutes < 1) return interaction.reply({ content: '❌ Enter a valid number of minutes.', ephemeral: true });
     if (watcher.triggered || watcher.posted) return interaction.reply({ content: '✅ Threshold was already reached — no delay needed.', ephemeral: true });
     watcher.expiresAt = (watcher.expiresAt ?? Date.now()) + minutes * 60 * 1000;

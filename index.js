@@ -70,7 +70,7 @@ function isPersistentEmbed(options) {
   const embeds = options?.embeds || [];
   return embeds.some(e => {
     const title = e?.data?.title ?? e?.title ?? '';
-    return title.includes('Watcher Active') || title.includes('Server Rankings');
+    return title.includes('Schedule Active') || title.includes('Server Rankings');
   });
 }
 
