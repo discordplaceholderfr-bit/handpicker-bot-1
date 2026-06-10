@@ -809,6 +809,7 @@ function setupHandpicker(client) {
     const parts       = interaction.customId.split('__');
     const gameId      = parts[1];
     const factionName = parts[2];
+    const guildId     = interaction.guildId;
     const game        = games[gameId];
     if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
     if (game.locked) return interaction.reply({ content: '❌ This handpick list is closed — no more claims are being accepted.', ephemeral: true });
