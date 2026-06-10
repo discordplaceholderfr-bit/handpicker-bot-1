@@ -189,6 +189,18 @@ const CATEGORIES = {
         name: '`/delete_player` — Host',
         value: 'Remove a specific player entirely from the leaderboard via dropdown — wipes all their MVPs and HMs in one go.\n\n**Use case:** A player left the server, was added by mistake, or needs a full reset.',
       },
+      {
+        name: '`/post_results` — Host',
+        value: 'Post an event results embed and automatically log MVPs and HMs to the leaderboard in one step. Opens a popup with three fields:\n• **Event Name** — shown as the embed title\n• **Summary** *(optional)* — short description of the event\n• **Results** — faction blocks, one per faction, up to 5:\n```\nFaction Name\nMVP: @Username, 123456789\nHM: @AnotherUser\n\nFaction 2\nMVP: @Player\nHM: @Other\n```\nUsers can be entered as `@Username`, a raw Discord ID, or a `<@mention>`. The embed posts permanently and the leaderboard is updated instantly.',
+      },
+      {
+        name: '`/edit_result` — Admin',
+        value: 'Edit a previously posted result. Opens the same popup pre-filled with the existing data. On submit the bot **automatically adjusts the leaderboard** — users removed lose their awards, users added gain them, switches between MVP and HM are handled too. The original embed in the channel is edited in-place.',
+      },
+      {
+        name: '`/list_results`',
+        value: 'Show all saved event results for this server — event name, date, and faction names for each.',
+      },
     ],
   },
 
@@ -257,6 +269,10 @@ const CATEGORIES = {
       {
         name: '`/reset_schedule` — Admin',
         value: 'Delete **all** active schedules for this server. Use `/remove_schedule` (in 🚫 Restrictions) to stop just one specific schedule.',
+      },
+      {
+        name: '`/delete_result` · `/reset_results` — Admin',
+        value: '`/delete_result` — Delete one event result via dropdown. Removes the embed from the channel and revokes all MVP/HM awards logged by that result.\n`/reset_results` — Wipe **all** event results for this server, delete their embeds, and revoke all associated awards. Asks for confirmation. Cannot be undone.',
       },
     ],
   },
