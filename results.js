@@ -89,13 +89,23 @@ const resultsCommands = [
       .addStringOption(o => o.setName('event_name').setDescription('Name of the event').setRequired(true))
   ).toJSON(),
 
-  addFactionOptions(
-    new SlashCommandBuilder()
-      .setName('edit_result')
-      .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
-      .addStringOption(o => o.setName('result_name').setDescription('Current event name of the result to edit').setRequired(true))
-      .addStringOption(o => o.setName('event_name').setDescription('New event name (leave blank to keep current)'))
-  ).toJSON(),
+  new SlashCommandBuilder()
+    .setName('edit_result')
+    .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
+    .addStringOption(o => o.setName('result_name').setDescription('Current event name of the result to edit').setRequired(true))
+    .addStringOption(o => o.setName('faction1_name').setDescription('First faction name').setRequired(true))
+    .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm1').setDescription('HM 1 of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm2').setDescription('HM 2 of faction 1'))
+    .addUserOption(o => o.setName('faction1_hm3').setDescription('HM 3 of faction 1'))
+    .addStringOption(o => o.setName('faction2_name').setDescription('Second faction name'))
+    .addUserOption(o => o.setName('faction2_mvp').setDescription('MVP of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm1').setDescription('HM 1 of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm2').setDescription('HM 2 of faction 2'))
+    .addUserOption(o => o.setName('faction2_hm3').setDescription('HM 3 of faction 2'))
+    .addStringOption(o => o.setName('event_name').setDescription('New event name (leave blank to keep current)'))
+    .addStringOption(o => o.setName('summary').setDescription('Brief summary (optional)'))
+    .toJSON(),
 
   new SlashCommandBuilder()
     .setName('list_results')
@@ -159,8 +169,9 @@ function setupResults(client) {
     if (commandName === 'edit_result') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       await interaction.deferReply({ ephemeral: true });
+      try {
 
-      const resultName = interaction.options.getString('result_name').trim().toLowerCase();
+      const resultName = interaction.options.getString('result_name')?.trim().toLowerCase();
       const guildData  = allResults[guildId] || {};
       const entry      = Object.entries(guildData).find(([, r]) => r.eventName.toLowerCase() === resultName);
       if (!entry) {
@@ -214,6 +225,10 @@ function setupResults(client) {
 
       refreshRankingsMessage(guildId).catch(() => {});
       return interaction.editReply({ content: '✅ Result updated and leaderboard adjusted.' });
+      } catch (e) {
+        console.error('edit_result error:', e);
+        return interaction.editReply({ content: `❌ Something went wrong: ${e.message}` }).catch(() => {});
+      }
     }
 
     if (commandName === 'list_results') {
