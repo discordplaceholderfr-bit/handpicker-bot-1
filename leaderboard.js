@@ -36,6 +36,19 @@ function getUser(guildId, userId, username) {
 // Score: 1 MVP = 2 pts, 1 HM = 1 pt
 function score(p) { return p.mvps * 2 + p.hms; }
 
+function awardMVP(guildId, userId, username, amount = 1) {
+  const user = getUser(guildId, userId, username);
+  user.mvps += amount;
+  saveLB(lb);
+  return user;
+}
+function awardHM(guildId, userId, username, amount = 1) {
+  const user = getUser(guildId, userId, username);
+  user.hms += amount;
+  saveLB(lb);
+  return user;
+}
+
 // ─── Rankings embed with server statistics panel ──────────────────────────────
 function buildRankingsEmbed(guildId) {
   const guildData = lb[guildId] || {};
@@ -321,4 +334,4 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
   });
 }
 
-module.exports = { setupLeaderboard, leaderboardCommands };
+module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM };
