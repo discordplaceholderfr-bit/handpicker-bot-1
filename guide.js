@@ -56,11 +56,15 @@ const CATEGORIES = {
       },
       {
         name: '`/schedule_event` — Host',
-        value: 'Schedule an event with an RSVP embed. Players click **Join** to sign up — the embed updates live with the count. When the cap is hit (or the event time arrives), the bot automatically posts the linked preset as a handpick list.\n\n**Required:**\n• `title` — event name\n• `datetime` — format: `YYYY-MM-DD HH:MM` (e.g. `2025-06-15 20:00`)\n\n**Optional:**\n• `cap` — player cap; fires the list the instant it\'s reached\n• `preset` — preset to post as a handpick list when the event fires\n• `min_players` — auto-cancels the event if not reached by start time\n• `warning_minutes` — sends a ping X min before start\n• `list_expiry` — minutes before the posted list locks for claiming\n• `ping_role` — role to ping when the list fires\n• `description` — shown in the event embed\n\n**Example:**\n`/schedule_event title:Siege of Vienna datetime:2025-06-15 20:00 cap:20 preset:WW2 Europe warning_minutes:30`',
+        value: 'Posts an event embed in the channel. Players react ✅ to vote — the embed updates the count live. When votes hit the threshold the bot fires the linked preset as a handpick list.\n\n**Required:**\n• `title` — event name shown in the embed\n• `preset` — preset to post when threshold is hit\n• `threshold` — number of ✅ reactions needed\n\n**Optional:**\n• `deadline` — how long the event stays open before auto-expiring: `1d`, `2h 30m`, etc.\n• `delay` — minutes to wait after threshold before posting the list (default: 0)\n• `list_expiry` — minutes before the posted list locks for claiming\n• `event_ping` — ping the event role when the list fires\n• `description` — extra text shown in the embed\n\n**Example:**\n`/schedule_event title:Siege of Vienna preset:WW2 Europe threshold:20 deadline:2h delay:5 list_expiry:15`',
       },
       {
-        name: '`/cancel_event` · `/list_events` — Host',
-        value: '`/cancel_event` — Cancel an active event via dropdown. Everyone who joined gets a DM notification.\n`/list_events` — Show all upcoming events with times and RSVP counts.',
+        name: '`/remove_event` · `/list_events` — Admin',
+        value: '`/remove_event` — Remove an active event via dropdown.\n`/list_events` — Show all active events with vote counts and status.',
+      },
+      {
+        name: '`/exclude_event` — Admin',
+        value: 'Exclude a player\'s ✅ reaction from being counted toward the threshold. Applied to all active events in the server.\n\n**Example:** `/exclude_event user:@Player reason:Not attending`',
       },
       {
         name: '`/add_preset_players` — Host',
