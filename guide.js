@@ -20,12 +20,12 @@ const CATEGORIES = {
         value: '1. Build a list once with `/create_handpick`\n2. Save it with `/save_preset name:Your Name`\n3. Next event: `/load_preset` → pick it → list posts instantly\n4. Need to tweak it? `/edit_preset` — no need to rebuild from scratch',
       },
       {
-        name: '📊 Poll Watcher — hands-free list posting',
+        name: '📊 Schedule — hands-free list posting',
         value: 'Set up with `/setup_schedule` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.\n\nAlternatively, use `/schedule_event` to skip the poll entirely — players RSVP directly on the event embed and the list fires automatically when the cap is hit or the event time arrives.',
       },
       {
         name: '🚫 Restrictions — keeping the count clean',
-        value: '`/exclude_check` removes a player\'s vote from the watcher count (logged to #homage-poll-log). `/remove_exclusion` undoes it. For players who are a recurring problem, `/blacklist` stops them from claiming in any list for a set time.',
+        value: '`/exclude_check` removes a player\'s vote from the schedule count (logged to #homage-poll-log). `/remove_exclusion` undoes it. For players who are a recurring problem, `/blacklist` stops them from claiming in any list for a set time.',
       },
       {
         name: '⭐ Majors — controlling who claims big countries',
@@ -124,20 +124,20 @@ const CATEGORIES = {
   },
 
   watcher: {
-    label: '📊 Watcher',
+    label: '📊 Schedule',
     color: 0x57f287,
     fields: [
       {
         name: '`/setup_schedule` — Host',
-        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the watcher auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_schedule threshold:20 delay:5 list_expiry:30 ping_event:true`',
+        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the schedule auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_schedule threshold:20 delay:5 list_expiry:30 ping_event:true`',
       },
       {
         name: '`/delay_schedule` — Admin',
-        value: 'Add extra minutes to an active watcher\'s countdown or deadline without having to delete and recreate it.\n\n**Use case:** The game gets delayed 30 minutes — run `/delay_schedule`, pick the watcher, enter `30` to push its deadline back.',
+        value: 'Add extra minutes to an active schedule\'s countdown or deadline without having to delete and recreate it.\n\n**Use case:** The game gets delayed 30 minutes — run `/delay_schedule`, pick the schedule, enter `30` to push its deadline back.',
       },
       {
         name: '`/list_schedules` — Admin',
-        value: 'Show all active watchers in this server. Displays each watcher\'s preset name, vote threshold, current vote count, deadline, and whether it has already fired.',
+        value: 'Show all active schedules in this server. Displays each schedule\'s preset name, vote threshold, current vote count, deadline, and whether it has already fired.',
       },
     ],
   },
@@ -148,7 +148,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/exclude_check` — Admin',
-        value: 'Exclude a specific player\'s vote from the watcher count. A reason is required. The exclusion is logged automatically to **#homage-poll-log** with the player, reason, and who excluded them.\n\n**Use case:** A player reacted to the poll but confirmed they can\'t attend — exclude their vote so it doesn\'t push the count toward the threshold.\n\n**How:** `/exclude_check` → pick the player from the list → enter the reason.',
+        value: 'Exclude a specific player\'s vote from the schedule count. A reason is required. The exclusion is logged automatically to **#homage-poll-log** with the player, reason, and who excluded them.\n\n**Use case:** A player reacted to the schedule but confirmed they can\'t attend — exclude their vote so it doesn\'t push the count toward the threshold.\n\n**How:** `/exclude_check` → pick the player from the list → enter the reason.',
       },
       {
         name: '`/remove_exclusion` — Admin',
@@ -156,7 +156,7 @@ const CATEGORIES = {
       },
       {
         name: '`/remove_schedule` — Admin',
-        value: 'Delete a specific watcher via dropdown. Stops it from monitoring the message entirely. The list it may have already posted is unaffected.\n\n**Use case:** An event is cancelled or you pointed the watcher at the wrong message.',
+        value: 'Delete a specific schedule via dropdown. Stops it from tracking reactions entirely. The list it may have already posted is unaffected.\n\n**Use case:** An event is cancelled and you no longer need the schedule.',
       },
       {
         name: '`/blacklist` — Admin',
@@ -256,7 +256,7 @@ const CATEGORIES = {
       },
       {
         name: '`/reset_schedule` — Admin',
-        value: 'Delete **all** active poll watchers for this server. Use `/remove_schedule` (in 🚫 Restrictions) to stop just one specific watcher.',
+        value: 'Delete **all** active schedules for this server. Use `/remove_schedule` (in 🚫 Restrictions) to stop just one specific schedule.',
       },
     ],
   },
