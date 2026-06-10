@@ -383,6 +383,7 @@ const watcherCommands = [
   new SlashCommandBuilder()
     .setName('setup_schedule')
     .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
+    .addStringOption(o => o.setName('title').setDescription('Name/title of the event').setRequired(true))
     .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
     .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting the list (default: 5)').setMinValue(0))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
@@ -459,6 +460,7 @@ function setupWatcher(client) {
     if (commandName === 'setup_schedule') {
       if (!isHost(interaction.member)) return denyHost(interaction);
 
+      const eventTitle   = interaction.options.getString('title');
       const threshold    = interaction.options.getInteger('threshold')    ?? 13;
       const delayMinutes = interaction.options.getInteger('delay')        ?? 5;
       const postChannel  = interaction.options.getChannel('post_channel');
@@ -511,6 +513,7 @@ function setupWatcher(client) {
         pingEvent,
         presetPlayers,
         slidesLink,
+        eventTitle,
       };
 
       // Show preset dropdown
@@ -762,7 +765,7 @@ function setupWatcher(client) {
     const expiryText  = pending.expiresAt ? `Expires <t:${Math.floor(pending.expiresAt / 1000)}:R>` : 'No deadline';
     const playerCount = Object.keys(pending.presetPlayers || {}).length;
     const watchEmbed  = new EmbedBuilder()
-      .setTitle('📅 Schedule Active!')
+      .setTitle(`📅 ${pending.eventTitle}`)
       .setColor(0x57f287)
       .addFields(
         { name: '📋 Preset',         value: `"${pending.presetName}"`,                                             inline: true },
