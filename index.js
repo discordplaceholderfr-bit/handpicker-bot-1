@@ -7,7 +7,6 @@ const { setupTeams, teamCommands } = require('./teams');
 const { setupImporter, importerCommands } = require('./importer');
 const { setupWatcher, watcherCommands } = require('./pollwatcher');
 const { setupGuide, guideCommands } = require('./guide');
-const { setupEvents, eventCommands } = require('./events');
 
 process.setMaxListeners(100);
 
@@ -36,7 +35,6 @@ client.once('clientReady', async (readyClient) => {
     ...importerCommands,
     ...watcherCommands,
     ...guideCommands,
-    ...eventCommands,
   ];
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -72,7 +70,7 @@ function isPersistentEmbed(options) {
   const embeds = options?.embeds || [];
   return embeds.some(e => {
     const title = e?.data?.title ?? e?.title ?? '';
-    return title.includes('Watcher Active') || title.includes('Server Rankings') || title.startsWith('📅');
+    return title.includes('Watcher Active') || title.includes('Server Rankings');
   });
 }
 
@@ -163,6 +161,5 @@ setupTeams(client);
 setupImporter(client);
 setupWatcher(client);
 setupGuide(client);
-setupEvents(client);
 
 client.login(process.env.DISCORD_TOKEN);
