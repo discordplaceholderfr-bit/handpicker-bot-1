@@ -315,22 +315,26 @@ function setupResults(client) {
       const guildId  = parts[1];
       const resultId = parts.slice(2).join('__');
       const result   = allResults[guildId]?.[resultId];
-      if (result?.messageId && result?.channelId) {
-        try {
-          const ch  = await client.channels.fetch(result.channelId);
-          const msg = await ch.messages.fetch(result.messageId);
-          await msg.delete();
-        } catch { /* already deleted */ }
+      if (result) {
+        revokeAwards(guildId, result.factions);
+        if (result.messageId && result.channelId) {
+          try {
+            const ch  = await client.channels.fetch(result.channelId);
+            const msg = await ch.messages.fetch(result.messageId);
+            await msg.delete();
+          } catch { /* already deleted */ }
+        }
+        delete allResults[guildId][resultId];
+        saveResults(allResults);
       }
-      delete allResults[guildId]?.[resultId];
-      saveResults(allResults);
-      return interaction.update({ content: '🗑️ Event result deleted.', embeds: [], components: [] });
+      return interaction.update({ content: '🗑️ Event result deleted and awards removed.', embeds: [], components: [] });
     }
 
     if (interaction.customId.startsWith('confirm_reset_results__')) {
-      const guildId     = interaction.customId.split('__')[1];
-      const guildData   = allResults[guildId] || {};
+      const guildId   = interaction.customId.split('__')[1];
+      const guildData = allResults[guildId] || {};
       for (const result of Object.values(guildData)) {
+        revokeAwards(guildId, result.factions);
         if (result.messageId && result.channelId) {
           try {
             const ch  = await client.channels.fetch(result.channelId);
@@ -341,7 +345,7 @@ function setupResults(client) {
       }
       allResults[guildId] = {};
       saveResults(allResults);
-      return interaction.update({ content: '🗑️ All event results wiped.', embeds: [], components: [] });
+      return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }
   });
 }
@@ -367,6 +371,13 @@ function buildModal(customId, title, eventName = '', summary = '', resultsText =
     ),
   );
   return modal;
+}
+
+function revokeAwards(guildId, factions) {
+  for (const f of factions) {
+    for (const uid of f.mvps || []) removeMVP(guildId, uid, 1);
+    for (const uid of f.hms  || []) removeHM(guildId, uid, 1);
+  }
 }
 
 function showResultPicker(interaction, guildId, customIdPrefix, placeholder) {
