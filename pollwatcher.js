@@ -904,37 +904,6 @@ function setupWatcher(client) {
     });
   });
 
-  // ── Dropdown: exclude watcher pick ─────────────────────────────────────────
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (!interaction.customId.startsWith('excl_watcher_pick__')) return;
-    const userId = interaction.customId.split('__')[1];
-    if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });
-
-    const [watcherId, targetUserId, encodedReason, expiresAtStr] = interaction.values[0].split('|||');
-    const reason     = decodeURIComponent(encodedReason);
-    const expiresAt  = parseInt(expiresAtStr) || (Date.now() + 30 * 60 * 1000);
-    const watcher    = watchers[watcherId];
-    if (!watcher) return interaction.update({ content: '❌ Watcher no longer exists.', components: [] });
-    if (isExcluded(watcher, targetUserId)) {
-      return interaction.update({ content: `❌ <@${targetUserId}> is already excluded from this watcher.`, components: [] });
-    }
-    if (!watcher.exclusions) watcher.exclusions = {};
-    watcher.exclusions[targetUserId] = { reason, excludedBy: interaction.user.id, timestamp: Date.now(), expiresAt };
-    saveWatchers(watchers);
-
-    const targetUser = await interaction.client.users.fetch(targetUserId).catch(() => ({ id: targetUserId, tag: targetUserId }));
-    if (interaction.guild) await logExclusion(interaction.guild, watcher, watcherId, targetUser, reason, interaction.user);
-
-    const countAfter = await getEffectiveCount(client, watcherId);
-    if (countAfter < watcher.threshold) await resetWatcher(client, watcherId);
-
-    return interaction.update({
-      content: `✅ <@${targetUserId}>'s vote excluded from watcher **#${watcherId.slice(-6)}** ("${watcher.presetName}"). Logged to #homage-poll-log.`,
-      components: [],
-    });
-  });
-
   // ── Dropdown: remove watcher pick ──────────────────────────────────────────
   client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
