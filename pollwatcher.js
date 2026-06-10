@@ -382,7 +382,7 @@ async function handleExpiry(client, watcherId) {
 const watcherCommands = [
   new SlashCommandBuilder()
     .setName('setup_watcher')
-    .setDescription('Host: Post a reaction embed — players react ✅ to vote, fires a handpick list when threshold is reached')
+    .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
     .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
     .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting the list (default: 5)').setMinValue(0))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
