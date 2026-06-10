@@ -345,10 +345,6 @@ const handpickerCommands = [
     .setDescription('Admin: Reset all handpick lists in this server')
     .toJSON(),
 
-  new SlashCommandBuilder()
-    .setName('help')
-    .setDescription('Show all available commands')
-    .toJSON(),
 ];
 
 module.exports.handpickerCommands = handpickerCommands;
@@ -805,68 +801,6 @@ function setupHandpicker(client) {
       return interaction.reply({ embeds: [confirmEmbed], components: [row] });
     }
 
-    if (commandName === 'help') {
-      const embed = new EmbedBuilder()
-        .setTitle('📖 Automatic Handpicker — All Commands')
-        .setColor(0x5865f2)
-        .addFields(
-          { name: '🗺️ Handpick Management', value: [
-            '`/create_handpick` — Create a new handpick list with title and factions',
-            '`/import_handpick` — Import a handpick list via text popup',
-            '`/add_faction` — Add a faction to the handpick list',
-            '`/remove_faction` — Remove a faction from the handpick list (dropdown) *(Admin)*',
-            '`/list` — Show all active handpick lists',
-            '`/delete_list` — Delete an active handpick list (dropdown) *(Admin)*',
-            '`/reset_list` — Wipe all handpick lists in this server (Admin)',
-          ].join('\n') },
-          { name: '🙋 Claiming', value: [
-            '`/claim` — Claim a country from a faction',
-            '`/swap` — Request to swap your country with another player\'s (both must accept)',
-            '`/remove_handpick` — Remove a user\'s claim (dropdown) *(Admin)*',
-            '`/remove_nation` — Remove a nation from a list entirely (dropdown) *(Admin)*',
-            '`/remove_faction` — Remove an entire faction from a list (dropdown) *(Admin)*',
-            '`/add_preset_players` — Pre-assign players to countries (modal)',
-          ].join('\n') },
-          { name: '🏆 Rankings & Awards', value: [
-            '`/give_mvp` — Give MVP award(s) to a user *(1 MVP = 2 pts)*',
-            '`/give_hm` — Give Honorable Mention(s) to a user *(1 HM = 1 pt)*',
-            '`/remove_mvp` — Remove MVP awards from a user',
-            '`/remove_hm` — Remove HM awards from a user',
-            '`/rankings` — Show the full ranked leaderboard with server stats',
-            '`/delete_player` — Remove a player from the leaderboard (dropdown)',
-            '`/reset_rankings` — Wipe the entire leaderboard (Admin)',
-          ].join('\n') },
-          { name: '💾 Presets', value: [
-            '`/save_preset` — Save an active list as a reusable preset',
-            '`/load_preset` — Deploy a saved preset as a new handpick list (dropdown)',
-            '`/list_presets` — Show all saved presets',
-            '`/preview_preset` — Preview a preset\'s countries (dropdown)',
-            '`/delete_preset` — Delete a saved preset (dropdown)',
-            '`/reset_presets` — Wipe all saved presets (Admin)',
-          ].join('\n') },
-          { name: '🎖️ Team Assignment', value: [
-            '`/setup_team` — Manually map a faction to a team role (Admin)',
-            '`/list_teams` — Show all faction → team role mappings',
-            '`/remove_team` — Remove the mapping for a specific faction (dropdown)',
-            '`/clear_teams` — Remove all team mappings for this server (Admin)',
-            '*Team roles auto-map when using `/create_handpick` or `/load_preset`*',
-          ].join('\n') },
-          { name: '📊 Poll / Reaction Watcher', value: [
-            '`/setup_watcher` — Watch a poll or reaction message and auto-post a preset when votes hit the threshold; options include expiry deadline, ping Event Ping, and pre-assigning players (Admin)',
-            '`/delay_watcher` — Add extra minutes to an active countdown or expiry deadline (Admin)',
-            '`/list_watchers` — Show all active poll/reaction watchers (Admin)',
-            '`/exclude_check` — Exclude a user\'s vote from the count with a reason, logged to #homage-poll-log (Admin)',
-            '`/remove_exclusion` — Remove an exclusion so that vote counts again (Admin)',
-            '`/remove_watcher` — Delete a specific watcher (Admin)',
-            '`/reset_watcher` — Delete ALL watchers for this server (Admin)',
-          ].join('\n') },
-          { name: '⚙️ Other Admin', value: [
-            '`/major_role` — Toggle a role\'s ability to claim Major countries',
-          ].join('\n') },
-        )
-        .setFooter({ text: 'Automatic Handpicker · Scoring: 1 MVP = 2 pts · 1 HM = 1 pt · Up to 5 factions per list' });
-      return interaction.reply({ embeds: [embed] });
-    }
   });
 
   client.on('interactionCreate', async interaction => {
