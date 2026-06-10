@@ -12,8 +12,9 @@ const {
 const fs   = require('fs');
 const path = require('path');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-const LB_FILE  = path.join(DATA_DIR, 'leaderboard.json');
+const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
+const LB_FILE     = path.join(DATA_DIR, 'leaderboard.json');
+const RANKPIN_FILE = path.join(DATA_DIR, 'rankings_pin.json');
 
 function loadLB() {
   try { return fs.existsSync(LB_FILE) ? JSON.parse(fs.readFileSync(LB_FILE, 'utf8')) : {}; }
@@ -24,7 +25,18 @@ function saveLB(data) {
   fs.writeFileSync(LB_FILE, JSON.stringify(data, null, 2));
 }
 
-let lb = loadLB();
+function loadPins() {
+  try { return fs.existsSync(RANKPIN_FILE) ? JSON.parse(fs.readFileSync(RANKPIN_FILE, 'utf8')) : {}; }
+  catch { return {}; }
+}
+function savePins(data) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(RANKPIN_FILE, JSON.stringify(data, null, 2));
+}
+
+let lb   = loadLB();
+let pins = loadPins();
+let _client = null;
 
 function getUser(guildId, userId, username) {
   if (!lb[guildId]) lb[guildId] = {};
@@ -133,6 +145,22 @@ function buildRankingsEmbed(guildId) {
     .setColor(0xf0c040);
 }
 
+// ─── Auto-refresh pinned rankings message ─────────────────────────────────────
+async function refreshRankingsMessage(guildId) {
+  if (!_client) return;
+  const pin = pins[guildId];
+  if (!pin) return;
+  try {
+    const ch  = await _client.channels.fetch(pin.channelId);
+    const msg = await ch.messages.fetch(pin.messageId);
+    await msg.edit({ embeds: [buildRankingsEmbed(guildId)] });
+  } catch {
+    // Message was deleted — clear the pin so we don't keep trying
+    delete pins[guildId];
+    savePins(pins);
+  }
+}
+
 // ─── Slash command definitions ────────────────────────────────────────────────
 const leaderboardCommands = [
   new SlashCommandBuilder()
@@ -181,6 +209,7 @@ const leaderboardCommands = [
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 function setupLeaderboard(client) {
+  _client = client;
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const { commandName, guildId } = interaction;
@@ -201,7 +230,9 @@ function setupLeaderboard(client) {
           { name: '📊 Score',      value: `${score(user)} pts`, inline: true },
         )
         .setColor(0xffd700).setTimestamp();
-      return interaction.reply({ embeds: [embed] }); // public
+      await interaction.reply({ embeds: [embed] }); // public
+      refreshRankingsMessage(guildId).catch(() => {});
+      return;
     }
 
     if (commandName === 'give_hm') {
@@ -220,7 +251,9 @@ function setupLeaderboard(client) {
           { name: '📊 Score',      value: `${score(user)} pts`, inline: true },
         )
         .setColor(0xc0c0c0).setTimestamp();
-      return interaction.reply({ embeds: [embed] }); // public
+      await interaction.reply({ embeds: [embed] }); // public
+      refreshRankingsMessage(guildId).catch(() => {});
+      return;
     }
 
     if (commandName === 'remove_mvp') {
@@ -231,7 +264,9 @@ function setupLeaderboard(client) {
       if (user.mvps === 0) return interaction.reply({ content: `❌ <@${target.id}> has no MVPs to remove.`, ephemeral: true });
       user.mvps = Math.max(0, user.mvps - amount);
       saveLB(lb);
-      return interaction.reply({ content: `✅ Removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.mvps}**.` });
+      await interaction.reply({ content: `✅ Removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.mvps}**.` });
+      refreshRankingsMessage(guildId).catch(() => {});
+      return;
     }
 
     if (commandName === 'remove_hm') {
@@ -242,11 +277,17 @@ function setupLeaderboard(client) {
       if (user.hms === 0) return interaction.reply({ content: `❌ <@${target.id}> has no HMs to remove.`, ephemeral: true });
       user.hms = Math.max(0, user.hms - amount);
       saveLB(lb);
-      return interaction.reply({ content: `✅ Removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.hms}**.` });
+      await interaction.reply({ content: `✅ Removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.hms}**.` });
+      refreshRankingsMessage(guildId).catch(() => {});
+      return;
     }
 
     if (commandName === 'rankings') {
-      return interaction.reply({ embeds: [buildRankingsEmbed(guildId)] });
+      await interaction.reply({ embeds: [buildRankingsEmbed(guildId)] });
+      const msg = await interaction.fetchReply();
+      pins[guildId] = { channelId: msg.channelId, messageId: msg.id };
+      savePins(pins);
+      return;
     }
 
     if (commandName === 'delete_player') {
@@ -346,4 +387,4 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
   });
 }
 
-module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM, removeMVP, removeHM };
+module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage };

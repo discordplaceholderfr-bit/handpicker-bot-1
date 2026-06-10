@@ -1,5 +1,5 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
-const { awardMVP, awardHM, removeMVP, removeHM } = require('./leaderboard');
+const { awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage } = require('./leaderboard');
 
 const {
   SlashCommandBuilder,
@@ -152,6 +152,7 @@ function setupResults(client) {
         allResults[guildId][resultId].channelId = msg.channelId;
         saveResults(allResults);
       }
+      refreshRankingsMessage(guildId).catch(() => {});
       return;
     }
 
@@ -211,6 +212,7 @@ function setupResults(client) {
         } catch { /* original message was deleted */ }
       }
 
+      refreshRankingsMessage(guildId).catch(() => {});
       return interaction.editReply({ content: '✅ Result updated and leaderboard adjusted.' });
     }
 
