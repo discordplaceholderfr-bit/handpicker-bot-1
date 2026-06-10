@@ -128,8 +128,8 @@ const CATEGORIES = {
     color: 0x57f287,
     fields: [
       {
-        name: '`/setup_watcher` — Admin',
-        value: 'Watch a poll or reaction message and automatically post a handpick list when votes hit the threshold.\n\n**Required options:**\n• `message_id` — ID of the poll/reaction message to watch\n• `preset` — which saved preset to post when triggered\n• `threshold` — number of votes needed to fire\n\n**Optional options:**\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*. When it locks the bot DMs you with Extend / Reopen buttons.\n• `event_ping` — role to ping when the list posts (e.g. @Event Ping)\n• `deadline` — date/time after which the watcher stops, format: `YYYY-MM-DD HH:MM`\n\n**Example:**\n`/setup_watcher message_id:123456 preset:Europe 1936 threshold:20 list_expiry:30 event_ping:@Members`',
+        name: '`/setup_watcher` — Host',
+        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the watcher auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_watcher threshold:20 delay:5 list_expiry:30 ping_event:true`',
       },
       {
         name: '`/delay_watcher` — Admin',

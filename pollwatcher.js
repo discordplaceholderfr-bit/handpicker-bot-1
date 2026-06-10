@@ -382,18 +382,11 @@ async function handleExpiry(client, watcherId) {
 const watcherCommands = [
   new SlashCommandBuilder()
     .setName('setup_watcher')
-    .setDescription('Host: Watch a poll or reaction — auto-posts a preset handpick list when votes hit the threshold')
-    .addStringOption(o => o.setName('message_link').setDescription('Right-click the message → Copy Message Link').setRequired(true))
-    .addStringOption(o => o.setName('type').setDescription('What to count (default: Discord poll)')
-      .addChoices(
-        { name: '✅ Reaction (emoji on a message)', value: 'reaction' },
-        { name: '📊 Poll (Discord native poll)',    value: 'poll'     },
-      ))
-    .addIntegerOption(o => o.setName('threshold').setDescription('Votes/reactions needed to trigger (default: 13)').setMinValue(1))
-    .addStringOption(o => o.setName('emoji').setDescription('Emoji to count — reaction type only (default: ✅)'))
-    .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting (default: 5)').setMinValue(0))
+    .setDescription('Host: Post a reaction embed — players react ✅ to vote, fires a handpick list when threshold is reached')
+    .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
+    .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting the list (default: 5)').setMinValue(0))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
-    .addIntegerOption(o => o.setName('expire_in').setDescription('Cancel watching after X minutes if threshold not reached (default: 30)').setMinValue(1))
+    .addIntegerOption(o => o.setName('expire_in').setDescription('Remove watcher after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
     .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role when the handpick list is posted? (default: false)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
@@ -465,17 +458,14 @@ function setupWatcher(client) {
     if (commandName === 'setup_watcher') {
       if (!isHost(interaction.member)) return denyHost(interaction);
 
-      const messageLink  = interaction.options.getString('message_link');
-      const type         = interaction.options.getString('type')         ?? 'poll';
-      const threshold    = interaction.options.getInteger('threshold')   ?? 13;
-      const emoji        = interaction.options.getString('emoji')        ?? '✅';
-      const delayMinutes = interaction.options.getInteger('delay')       ?? 5;
+      const threshold    = interaction.options.getInteger('threshold')    ?? 13;
+      const delayMinutes = interaction.options.getInteger('delay')        ?? 5;
       const postChannel  = interaction.options.getChannel('post_channel');
-      const expireIn     = interaction.options.getInteger('expire_in')   ?? 30;
+      const expireIn     = interaction.options.getInteger('expire_in')    ?? 30;
       const expiresAt    = Date.now() + expireIn * 60 * 1000;
-      const listExpiryMin      = interaction.options.getInteger('list_expiry') ?? 15;
-      const pingEvent          = interaction.options.getBoolean('ping_event') ?? false;
-      const presetPlayersRaw   = interaction.options.getString('preset_players') ?? '';
+      const listExpiryMin    = interaction.options.getInteger('list_expiry')   ?? 15;
+      const pingEvent        = interaction.options.getBoolean('ping_event')    ?? false;
+      const presetPlayersRaw = interaction.options.getString('preset_players') ?? '';
 
       // Parse "Nation: UserID; Nation: UserID" into an object
       const presetPlayers = {};
@@ -489,10 +479,6 @@ function setupWatcher(client) {
         }
       }
 
-      const parsed = parseMessageLink(messageLink);
-      if (!parsed)                    return interaction.reply({ content: '❌ Invalid message link. Right-click the message → **Copy Message Link**.', ephemeral: true });
-      if (parsed.guildId !== guildId) return interaction.reply({ content: '❌ That message belongs to a different server.', ephemeral: true });
-
       // Check presets exist
       const presets = loadPresets();
       const guildPresets = presets[guildId] || {};
@@ -503,14 +489,13 @@ function setupWatcher(client) {
 
       // Build pending config (stored until preset is chosen)
       const pendingId = `pending_${interaction.user.id}_${Date.now()}`;
-      // Store config in the watcher data temporarily keyed by pendingId
       watchers[pendingId] = {
         _pending:      true,
         guildId,
-        channelId:     parsed.channelId,
-        messageId:     parsed.messageId,
-        type,
-        emoji:         type === 'reaction' ? emoji : null,
+        channelId:     interaction.channelId,
+        messageId:     null, // set after bot posts the embed
+        type:          'reaction',
+        emoji:         '✅',
         threshold,
         delayMinutes,
         postChannelId: postChannel?.id ?? interaction.channelId,
@@ -522,9 +507,8 @@ function setupWatcher(client) {
         expiresAt,
         listExpiryMs:  listExpiryMin * 60 * 1000,
         pingEvent,
-        presetPlayers: presetPlayers,
+        presetPlayers,
       };
-      // Don't save pending ones to disk
 
       // Show preset dropdown
       const opts = presetNames.map(name => {
@@ -544,7 +528,7 @@ function setupWatcher(client) {
           .addOptions(opts)
       );
       return interaction.reply({
-        content: `📋 Which preset should be posted when **${threshold}** ${type === 'reaction' ? `${emoji} reactions` : 'poll votes'} are reached?`,
+        content: `📋 Which preset should be posted when **${threshold}** ✅ reactions are reached?`,
         components: [row],
       });
     }
@@ -754,48 +738,55 @@ function setupWatcher(client) {
     const pending = watchers[pendingId];
     if (!pending?._pending) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
 
-    // Store preset name — players already parsed from the slash command option
     pending.presetName = presetName;
 
-    const result = finalizePending(pendingId);
+    const result = await finalizePending(pendingId);
     if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
-    return interaction.update({ embeds: [result.embed], components: [], content: '' });
+    return interaction.update({ content: '✅ Watcher posted! Players can now react ✅ to vote.', components: [], embeds: [] });
   });
 
-  // ── Helper: finalize pending → real watcher and return confirmation embed ──
-  function finalizePending(pendingId) {
-    const pending   = watchers[pendingId];
+  // ── Helper: finalize pending → post reaction embed, react ✅, start watcher ──
+  async function finalizePending(pendingId) {
+    const pending = watchers[pendingId];
     if (!pending?._pending) return null;
     delete pending._pending;
     pending.createdAt = Date.now();
     const watcherId = `watcher_${pending.guildId}_${Date.now()}`;
     watchers[watcherId] = pending;
     delete watchers[pendingId];
+
+    // Post the reaction embed in the watcher's channel
+    const expiryText  = pending.expiresAt ? `Expires <t:${Math.floor(pending.expiresAt / 1000)}:R>` : 'No deadline';
+    const playerCount = Object.keys(pending.presetPlayers || {}).length;
+    const watchEmbed  = new EmbedBuilder()
+      .setTitle('👀 Watcher Active!')
+      .setColor(0x57f287)
+      .addFields(
+        { name: '📋 Preset',         value: `"${pending.presetName}"`,                                             inline: true },
+        { name: '🎯 Threshold',      value: `${pending.threshold} ✅ reactions`,                                  inline: true },
+        { name: '⏱️ Delay',          value: `${pending.delayMinutes} minute(s) after threshold`,                  inline: true },
+        { name: '📋 Posts to',       value: `<#${pending.postChannelId}>`,                                        inline: true },
+        { name: '⏰ Deadline',       value: expiryText,                                                            inline: true },
+        { name: '🔒 List Closes In', value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,      inline: true },
+        { name: '👥 Preset Players', value: playerCount > 0 ? `${playerCount} pre-assigned` : 'None',             inline: true },
+      )
+      .setFooter({ text: `ID: #${watcherId.slice(-6)} · Exclusion logs → #homage-poll-log · React ✅ to vote` })
+      .setTimestamp();
+
+    try {
+      const ch  = await client.channels.fetch(pending.channelId);
+      const msg = await ch.send({ embeds: [watchEmbed] });
+      pending.messageId = msg.id;
+      // Bot reacts ✅ as a visual cue — bot reactions don't count toward threshold
+      await msg.react('✅');
+    } catch (e) {
+      console.warn('finalizePending: failed to post/react to watcher embed:', e.message);
+    }
+
     saveWatchers(watchers);
     startExpiryTimer(client, watcherId);
     scheduleWatcherAutoReset(client, watcherId);
-    const typeLabel  = pending.type === 'reaction' ? `${pending.emoji} reactions` : 'poll votes';
-    const expiryText = pending.expiresAt ? `Expires <t:${Math.floor(pending.expiresAt / 1000)}:R>` : 'No deadline';
-    const playerCount = Object.keys(pending.presetPlayers || {}).length;
-    return {
-      watcherId,
-      embed: new EmbedBuilder()
-        .setTitle('👀 Watcher Active!')
-        .setColor(0x57f287)
-        .addFields(
-          { name: '📋 Preset',          value: `"${pending.presetName}"`,                                                  inline: true },
-          { name: '📊 Type',            value: pending.type === 'reaction' ? `Reaction (${pending.emoji})` : 'Discord Poll', inline: true },
-          { name: '🎯 Threshold',       value: `${pending.threshold} ${typeLabel}`,                                        inline: true },
-          { name: '⏱️ Delay',           value: `${pending.delayMinutes} minute(s) after threshold`,                        inline: true },
-          { name: '📋 Posts to',        value: `<#${pending.postChannelId}>`,                                              inline: true },
-          { name: '⏰ Deadline',        value: expiryText,                                                                  inline: true },
-          { name: '🔒 List Closes In',  value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,             inline: true },
-          { name: '👥 Preset Players',  value: playerCount > 0 ? `${playerCount} pre-assigned` : 'None',                   inline: true },
-          { name: '🔗 Watching',        value: `[Jump to message](https://discord.com/channels/${pending.guildId}/${pending.channelId}/${pending.messageId})`, inline: true },
-        )
-        .setFooter({ text: `ID: #${watcherId.slice(-6)} · Exclusion logs → #homage-poll-log` })
-        .setTimestamp(),
-    };
+    return { watcherId };
   }
 
   // ── Button: skip preset players ────────────────────────────────────────────
@@ -803,9 +794,9 @@ function setupWatcher(client) {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('watcher_skip_players__')) return;
     const pendingId = interaction.customId.replace('watcher_skip_players__', '');
-    const result = finalizePending(pendingId);
+    const result = await finalizePending(pendingId);
     if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
-    return interaction.update({ embeds: [result.embed], components: [], content: '' });
+    return interaction.update({ content: '✅ Watcher posted! Players can now react ✅ to vote.', components: [], embeds: [] });
   });
 
   // ── Button: open preset players modal ──────────────────────────────────────
@@ -852,13 +843,14 @@ function setupWatcher(client) {
       assigned.push(`**${nation}** → <@${userId}>`);
     }
 
-    const result = finalizePending(pendingId);
+    const result = await finalizePending(pendingId);
     if (!result) return interaction.editReply({ content: '❌ Setup expired.', components: [], embeds: [] });
 
-    let summary = assigned.length > 0 ? `✅ **${assigned.length}** pre-assigned:\n${assigned.join('\n')}\n\n` : '';
-    if (failed.length > 0) summary += `⚠️ **${failed.length}** failed:\n${failed.map(f => `• ${f}`).join('\n')}\n\n`;
+    let summary = '✅ Watcher posted! Players can now react ✅ to vote.\n\n';
+    if (assigned.length > 0) summary += `📋 **${assigned.length}** pre-assigned:\n${assigned.join('\n')}\n\n`;
+    if (failed.length > 0)   summary += `⚠️ **${failed.length}** failed:\n${failed.map(f => `• ${f}`).join('\n')}`;
 
-    return interaction.editReply({ content: summary || null, embeds: [result.embed], components: [] });
+    return interaction.editReply({ content: summary.trim(), embeds: [], components: [] });
   });
 
   // ── Button: expiry custom delay (opens modal) ──────────────────────────────
