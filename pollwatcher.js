@@ -381,12 +381,12 @@ async function handleExpiry(client, watcherId) {
 // ── Slash command definitions ─────────────────────────────────────────────────
 const watcherCommands = [
   new SlashCommandBuilder()
-    .setName('setup_watcher')
+    .setName('setup_schedule')
     .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
     .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
     .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting the list (default: 5)').setMinValue(0))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
-    .addIntegerOption(o => o.setName('expire_in').setDescription('Remove watcher after X minutes if threshold not reached (default: 30)').setMinValue(1))
+    .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
     .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role when the handpick list is posted? (default: false)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
@@ -394,36 +394,36 @@ const watcherCommands = [
 
   new SlashCommandBuilder()
     .setName('exclude_check')
-    .setDescription('Host: Exclude a user\'s vote/reaction from the count (logged to #homage-poll-log)')
+    .setDescription('Admin: Exclude a user\'s vote from a schedule\'s count (logged to #homage-poll-log)')
     .addUserOption(o => o.setName('user').setDescription('User whose vote to exclude').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('Reason for exclusion').setRequired(true))
     .addStringOption(o => o.setName('duration').setDescription('How long to exclude e.g. 1d 2h 30m (default: 30m)').setRequired(true))
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('list_watchers')
-    .setDescription('Show all active poll/reaction watchers in this server')
+    .setName('list_schedules')
+    .setDescription('Show all active schedules in this server')
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('remove_watcher')
-    .setDescription('Admin: Remove a poll/reaction watcher')
+    .setName('remove_schedule')
+    .setDescription('Admin: Remove an active schedule')
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('delay_watcher')
-    .setDescription('Admin: Add extra minutes to an active countdown or deadline')
+    .setName('delay_schedule')
+    .setDescription('Admin: Add extra minutes to an active schedule countdown or deadline')
     .addIntegerOption(o => o.setName('minutes').setDescription('Minutes to add').setRequired(true).setMinValue(1))
     .toJSON(),
 
   new SlashCommandBuilder()
     .setName('remove_exclusion')
-    .setDescription('Admin: Remove an exclusion from a watcher so that vote counts again')
+    .setDescription('Admin: Remove an exclusion from a schedule so that vote counts again')
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('reset_watcher')
-    .setDescription('Admin: Delete ALL watchers for this server')
+    .setName('reset_schedule')
+    .setDescription('Admin: Delete ALL schedules for this server')
     .toJSON(),
 ];
 
@@ -455,7 +455,7 @@ function setupWatcher(client) {
     const { commandName, guildId, guild } = interaction;
 
     // ── /setup_watcher ──────────────────────────────────────────────────────
-    if (commandName === 'setup_watcher') {
+    if (commandName === 'setup_schedule') {
       if (!isHost(interaction.member)) return denyHost(interaction);
 
       const threshold    = interaction.options.getInteger('threshold')    ?? 13;
@@ -571,7 +571,7 @@ function setupWatcher(client) {
     }
 
     // ── /list_watchers ──────────────────────────────────────────────────────
-    if (commandName === 'list_watchers') {
+    if (commandName === 'list_schedules') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
       if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No watchers set up for this server.' });
@@ -634,7 +634,7 @@ function setupWatcher(client) {
     }
 
     // ── /reset_watcher ──────────────────────────────────────────────────────
-    if (commandName === 'reset_watcher') {
+    if (commandName === 'reset_schedule') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
       if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active watchers in this server.', ephemeral: true });
@@ -651,7 +651,7 @@ function setupWatcher(client) {
     }
 
     // ── /delay_watcher ──────────────────────────────────────────────────────
-    if (commandName === 'delay_watcher') {
+    if (commandName === 'delay_schedule') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       const minutes       = interaction.options.getInteger('minutes');
       const addMs         = minutes * 60 * 1000;
@@ -708,7 +708,7 @@ function setupWatcher(client) {
     }
 
     // ── /remove_watcher ─────────────────────────────────────────────────────
-    if (commandName === 'remove_watcher') {
+    if (commandName === 'remove_schedule') {
       if (!isHost(interaction.member)) return denyHost(interaction);
       const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
       if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No watchers to remove.', ephemeral: true });
@@ -736,12 +736,12 @@ function setupWatcher(client) {
 
     const [pendingId, presetName] = interaction.values[0].split('|||');
     const pending = watchers[pendingId];
-    if (!pending?._pending) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
+    if (!pending?._pending) return interaction.update({ content: '❌ Setup expired. Run `/setup_schedule` again.', components: [] });
 
     pending.presetName = presetName;
 
     const result = await finalizePending(pendingId);
-    if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
+    if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_schedule` again.', components: [] });
     return interaction.update({ content: '✅ Watcher posted! Players can now react ✅ to vote.', components: [], embeds: [] });
   });
 
@@ -795,7 +795,7 @@ function setupWatcher(client) {
     if (!interaction.customId.startsWith('watcher_skip_players__')) return;
     const pendingId = interaction.customId.replace('watcher_skip_players__', '');
     const result = await finalizePending(pendingId);
-    if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_watcher` again.', components: [] });
+    if (!result) return interaction.update({ content: '❌ Setup expired. Run `/setup_schedule` again.', components: [] });
     return interaction.update({ content: '✅ Watcher posted! Players can now react ✅ to vote.', components: [], embeds: [] });
   });
 
@@ -826,7 +826,7 @@ function setupWatcher(client) {
     if (!interaction.customId.startsWith('watcher_players_modal__')) return;
     const pendingId = interaction.customId.replace('watcher_players_modal__', '');
     const pending   = watchers[pendingId];
-    if (!pending?._pending) return interaction.reply({ content: '❌ Setup expired. Run `/setup_watcher` again.', ephemeral: true });
+    if (!pending?._pending) return interaction.reply({ content: '❌ Setup expired. Run `/setup_schedule` again.', ephemeral: true });
 
     await interaction.deferUpdate();
 

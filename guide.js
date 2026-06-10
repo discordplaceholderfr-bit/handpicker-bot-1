@@ -21,7 +21,7 @@ const CATEGORIES = {
       },
       {
         name: '📊 Poll Watcher — hands-free list posting',
-        value: 'Set up with `/setup_watcher` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.\n\nAlternatively, use `/schedule_event` to skip the poll entirely — players RSVP directly on the event embed and the list fires automatically when the cap is hit or the event time arrives.',
+        value: 'Set up with `/setup_schedule` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.\n\nAlternatively, use `/schedule_event` to skip the poll entirely — players RSVP directly on the event embed and the list fires automatically when the cap is hit or the event time arrives.',
       },
       {
         name: '🚫 Restrictions — keeping the count clean',
@@ -128,15 +128,15 @@ const CATEGORIES = {
     color: 0x57f287,
     fields: [
       {
-        name: '`/setup_watcher` — Host',
-        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the watcher auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_watcher threshold:20 delay:5 list_expiry:30 ping_event:true`',
+        name: '`/setup_schedule` — Host',
+        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the watcher auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_schedule threshold:20 delay:5 list_expiry:30 ping_event:true`',
       },
       {
-        name: '`/delay_watcher` — Admin',
-        value: 'Add extra minutes to an active watcher\'s countdown or deadline without having to delete and recreate it.\n\n**Use case:** The game gets delayed 30 minutes — run `/delay_watcher`, pick the watcher, enter `30` to push its deadline back.',
+        name: '`/delay_schedule` — Admin',
+        value: 'Add extra minutes to an active watcher\'s countdown or deadline without having to delete and recreate it.\n\n**Use case:** The game gets delayed 30 minutes — run `/delay_schedule`, pick the watcher, enter `30` to push its deadline back.',
       },
       {
-        name: '`/list_watchers` — Admin',
+        name: '`/list_schedules` — Admin',
         value: 'Show all active watchers in this server. Displays each watcher\'s preset name, vote threshold, current vote count, deadline, and whether it has already fired.',
       },
     ],
@@ -155,7 +155,7 @@ const CATEGORIES = {
         value: 'Undo an exclusion so that player\'s vote counts again toward the threshold.\n\n**Use case:** You excluded someone but they\'ve since confirmed they can attend.',
       },
       {
-        name: '`/remove_watcher` — Admin',
+        name: '`/remove_schedule` — Admin',
         value: 'Delete a specific watcher via dropdown. Stops it from monitoring the message entirely. The list it may have already posted is unaffected.\n\n**Use case:** An event is cancelled or you pointed the watcher at the wrong message.',
       },
       {
@@ -255,8 +255,8 @@ const CATEGORIES = {
         value: 'Remove **all** faction → team role mappings at once. Players who already have team roles keep them — only future claims are affected.',
       },
       {
-        name: '`/reset_watcher` — Admin',
-        value: 'Delete **all** active poll watchers for this server. Use `/remove_watcher` (in 🚫 Restrictions) to stop just one specific watcher.',
+        name: '`/reset_schedule` — Admin',
+        value: 'Delete **all** active poll watchers for this server. Use `/remove_schedule` (in 🚫 Restrictions) to stop just one specific watcher.',
       },
     ],
   },
