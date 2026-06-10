@@ -32,6 +32,10 @@ const CATEGORIES = {
         value: 'Any country whose name starts with `*` (e.g. `*Prussia`) is a Major country, locked behind approved roles. Use `/major_role role:@Role` to toggle a role on/off the approved list. Players without an approved role get blocked when they try to claim one.',
       },
       {
+        name: '🏁 Results — post outcomes and auto-log awards',
+        value: 'After an event ends, use `/post_results` to post a results embed and automatically log MVPs and HMs to the leaderboard in one step. Enter up to 5 factions with their MVP and HM recipients — users can be tagged by `@Username`, raw ID, or `<@mention>`.\n\nNeed to fix a mistake? `/edit_result` reopens the form pre-filled and adjusts the leaderboard automatically — no need to manually remove and re-give awards.',
+      },
+      {
         name: '📬 When does the bot DM you?',
         value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted and the channel is notified.\n• **List fully filled** — DM when every country is claimed.\n• **Main slots filled, extras remain** — DM listing the unclaimed (Extra) countries if no extras have been picked yet.\n\nAll three only fire once per list.',
       },
