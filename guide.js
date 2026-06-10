@@ -16,28 +16,44 @@ const CATEGORIES = {
     color: 0x5865f2,
     fields: [
       {
+        name: '📋 Creating lists',
+        value: '`/create_handpick` — build a list from scratch with a title and up to 5 factions.\n`/import_handpick` — paste a pre-written list into a popup (fastest when you already have it written).\n`/add_faction` — add a faction to an already active list.\n\nPrefix any country with `*` to mark it as a Major (e.g. `*Prussia`) — it shows as 🔸 and requires an approved role to claim.',
+      },
+      {
         name: '💾 Presets — the fastest way to run events',
         value: '1. Build a list once with `/create_handpick`\n2. Save it with `/save_preset name:Your Name`\n3. Next event: `/load_preset` → pick it → list posts instantly\n4. Need to tweak it? `/edit_preset` — no need to rebuild from scratch',
       },
       {
         name: '📊 Schedule — hands-free list posting',
-        value: 'Set up with `/setup_schedule` pointing at your poll/reaction message. When votes hit the threshold the bot posts the preset automatically and pings your event role. Set `list_expiry` to lock claiming after X minutes — the bot DMs you when it locks so you can extend or reopen.\n\nAlternatively, use `/schedule_event` to skip the poll entirely — players RSVP directly on the event embed and the list fires automatically when the cap is hit or the event time arrives.',
+        value: 'Set up with `/setup_schedule` — the bot posts a reaction embed and watches it. When ✅ reactions hit the threshold the preset fires automatically.\n\nAlternatively, `/setup_schedule` with a custom preset and threshold handles the whole flow: players react, bot fires the list, pings your event role, and DMs you when the list locks.',
       },
       {
-        name: '🚫 Restrictions — keeping the count clean',
-        value: '`/exclude_check` removes a player\'s vote from the schedule count (logged to #homage-poll-log). `/remove_exclusion` undoes it. For players who are a recurring problem, `/blacklist` stops them from claiming in any list for a set time.',
+        name: '✏️ Editing active lists',
+        value: '`/remove_player` — remove a player\'s claim (by tag or dropdown).\n`/remove_nation` — remove a country from a list entirely.\n`/remove_faction` — remove a whole faction.\n`/swap` — let two players swap countries (both must accept within 2 minutes).\n`/add_preset_players` — bulk pre-assign players to countries via a text popup.',
+      },
+      {
+        name: '🎖️ Teams — automatic role assignment',
+        value: 'When a player claims a country the bot gives them the mapped Discord role automatically, and strips it on unclaim. Roles named **Team 1**, **Team 2**, etc. are auto-mapped to factions on list creation — no setup needed. Use `/setup_team` to manually map a faction to any role.',
       },
       {
         name: '⭐ Majors — controlling who claims big countries',
         value: 'Any country whose name starts with `*` (e.g. `*Prussia`) is a Major country, locked behind approved roles. Use `/major_role role:@Role` to toggle a role on/off the approved list. Players without an approved role get blocked when they try to claim one.',
       },
       {
+        name: '🚫 Restrictions — keeping the count clean',
+        value: '`/exclude_check` removes a player\'s vote from the schedule count (logged to #homage-poll-log). `/remove_exclusion` undoes it. `/blacklist` stops a player from claiming in any list for a set duration — they see the reason and time remaining on every failed attempt.',
+      },
+      {
+        name: '🏆 Awards & Rankings',
+        value: '`/give_mvp` and `/give_hm` give awards manually *(1 MVP = 2 pts · 1 HM = 1 pt)*. `/rankings` shows the full leaderboard with server stats. Use `/remove_mvp` or `/remove_hm` to correct mistakes.',
+      },
+      {
         name: '🏁 Results — post outcomes and auto-log awards',
-        value: 'After an event ends, use `/post_results` to post a results embed and automatically log MVPs and HMs to the leaderboard in one step. Enter up to 5 factions with their MVP and HM recipients — users can be tagged by `@Username`, raw ID, or `<@mention>`.\n\nNeed to fix a mistake? `/edit_result` reopens the form pre-filled and adjusts the leaderboard automatically — no need to manually remove and re-give awards.',
+        value: 'After an event ends, `/post_results` posts a results embed and logs MVPs/HMs to the leaderboard in one step — up to 5 factions, users tagged by `@Username`, ID, or mention.\n\n`/edit_result` reopens the form pre-filled and adjusts the leaderboard automatically. Deleting a result also revokes its awards.',
       },
       {
         name: '📬 When does the bot DM you?',
-        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted and the channel is notified.\n• **List fully filled** — DM when every country is claimed.\n• **Main slots filled, extras remain** — DM listing the unclaimed (Extra) countries if no extras have been picked yet.\n\nAll three only fire once per list.',
+        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed (Extra) countries if none have been picked yet.\n\nAll three only fire once per list.',
       },
     ],
   },
