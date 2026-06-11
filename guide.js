@@ -11,6 +11,8 @@ const {
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = {
 
+  // ── Section 1 ──────────────────────────────────────────────────────────────
+
   overview: {
     label: '⚡ Overview',
     color: 0x5865f2,
@@ -49,11 +51,11 @@ const CATEGORIES = {
       },
       {
         name: '🏁 Results — post outcomes and auto-log awards',
-        value: 'After an event ends, `/post_results` posts a results embed and logs MVPs/HMs to the leaderboard in one step — up to 5 factions, users tagged by `@Username`, ID, or mention.\n\n`/edit_result` reopens the form pre-filled and adjusts the leaderboard automatically. Deleting a result also revokes its awards.',
+        value: 'After an event ends, `/post_results` posts a results embed and logs MVPs/HMs to the leaderboard in one step — up to 2 factions, users tagged directly via mention.\n\n`/edit_result` lets you re-pick the result and adjusts the leaderboard automatically.',
       },
       {
         name: '📬 When does the bot DM you?',
-        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country (including Extras) is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed `(Extra)` countries the moment all main slots fill but no extras have been taken yet.\n\nAll three only fire once per list. See the **📦 Extras** category for full details on how Extra countries work.',
+        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country (including Extras) is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed `(Extra)` countries the moment all main slots fill but no extras have been taken yet.\n\nAll three only fire once per list. See **Section 2 → 📦 Extras** for full details on how Extra countries work.',
       },
     ],
   },
@@ -73,18 +75,6 @@ const CATEGORIES = {
       {
         name: '`/add_faction` — Host',
         value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:*USSR, China, Mongolia`\n\nPrefix any country with `*` to mark it as Major — it shows as 🔸 in the embed and requires an approved Major role to claim.',
-      },
-      {
-        name: '`/schedule_event` — Host',
-        value: 'Posts an event embed in the channel. Players react ✅ to vote — the embed updates the count live. When votes hit the threshold the bot fires the linked preset as a handpick list.\n\n**Required:**\n• `title` — event name shown in the embed\n• `preset` — preset to post when threshold is hit\n• `threshold` — number of ✅ reactions needed\n\n**Optional:**\n• `deadline` — how long the event stays open before auto-expiring: `1d`, `2h 30m`, etc.\n• `delay` — minutes to wait after threshold before posting the list (default: 0)\n• `list_expiry` — minutes before the posted list locks for claiming\n• `event_ping` — ping the event role when the list fires\n• `description` — extra text shown in the embed\n\n**Example:**\n`/schedule_event title:Siege of Vienna preset:WW2 Europe threshold:20 deadline:2h delay:5 list_expiry:15`',
-      },
-      {
-        name: '`/remove_event` · `/list_events` — Admin',
-        value: '`/remove_event` — Remove an active event via dropdown.\n`/list_events` — Show all active events with vote counts and status.',
-      },
-      {
-        name: '`/exclude_event` — Admin',
-        value: 'Exclude a player\'s ✅ reaction from being counted toward the threshold. Applied to all active events in the server.\n\n**Example:** `/exclude_event user:@Player reason:Not attending`',
       },
       {
         name: '`/add_preset_players` — Host',
@@ -149,7 +139,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/setup_schedule` — Host',
-        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional:**\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the schedule auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `preset_players` — pre-assign players: `Nation: UserID; Nation: UserID`\n\n**Example:**\n`/setup_schedule threshold:20 delay:5 list_expiry:30 ping_event:true`',
+        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**All options are optional except `title`:**\n• `title` — event name shown in the embed *(required)*\n• `threshold` — ✅ reactions needed to fire *(default: 13)*\n• `delay` — minutes to wait after threshold before posting *(default: 5)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the schedule auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `ping_event` — ping the Event Ping role when the list fires\n• `slides` — link to your slides (shown in the embed)\n\n**Example:**\n`/setup_schedule title:Siege of Vienna threshold:20 delay:5 list_expiry:30 ping_event:true`',
       },
       {
         name: '`/delay_schedule` — Admin',
@@ -203,7 +193,7 @@ const CATEGORIES = {
       },
       {
         name: '`/rankings`',
-        value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player',
+        value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player\n\nThe rankings embed auto-updates whenever an MVP or HM is given, removed, or results are posted.',
       },
       {
         name: '`/delete_player` — Host',
@@ -211,11 +201,11 @@ const CATEGORIES = {
       },
       {
         name: '`/post_results` — Host',
-        value: 'Post an event results embed and automatically log MVPs and HMs to the leaderboard in one step. Opens a popup with three fields:\n• **Event Name** — shown as the embed title\n• **Summary** *(optional)* — short description of the event\n• **Results** — faction blocks, one per faction, up to 5:\n```\nFaction Name\nMVP: @Username, 123456789\nHM: @AnotherUser\n\nFaction 2\nMVP: @Player\nHM: @Other\n```\nUsers can be entered as `@Username`, a raw Discord ID, or a `<@mention>`. The embed posts permanently and the leaderboard is updated instantly.',
+        value: 'Post an event results embed and automatically log MVPs and HMs to the leaderboard in one step. Up to 2 factions, each with 1 MVP slot and up to 3 HM slots — tag players directly using Discord\'s @mention selector.\n\n**Options:** `event_name` *(required)*, `faction1_name` *(required)*, `faction1_mvp`, `faction1_hm1/2/3`, `faction2_name`, `faction2_mvp`, `faction2_hm1/2/3`, `summary`.',
       },
       {
         name: '`/edit_result` — Admin',
-        value: 'Edit a previously posted result. Opens the same popup pre-filled with the existing data. On submit the bot **automatically adjusts the leaderboard** — users removed lose their awards, users added gain them, switches between MVP and HM are handled too. The original embed in the channel is edited in-place.',
+        value: 'Edit a previously posted result. Pick the result from a dropdown, then re-enter the faction and award data. The bot **automatically adjusts the leaderboard** — users removed lose their awards, users added gain them. The original embed in the channel is edited in-place.',
       },
       {
         name: '`/list_results`',
@@ -266,29 +256,6 @@ const CATEGORIES = {
     ],
   },
 
-  extras: {
-    label: '📦 Extras',
-    color: 0x1abc9c,
-    fields: [
-      {
-        name: 'What are Extra countries?',
-        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown exactly like any other country — players see and claim them the same way. The only difference is how the bot treats them internally.',
-      },
-      {
-        name: 'How to add Extra countries',
-        value: 'Just include `(Extra)` anywhere in the country name when creating or importing a list:\n\n**In `/create_handpick`:**\n`faction1_countries:Germany, France, Spain (Extra), Portugal (Extra)`\n\n**In `/import_handpick`:**\n```\n[Allies]\nUSA\nUK\nCanada (Extra)\nAustralia (Extra)\n```\n\nYou can also add them to a saved preset via `/edit_preset` → **Add Countries**.',
-      },
-      {
-        name: '📬 The two DMs you get as host',
-        value: '**1. All mains filled, no extras taken yet**\nWhen every non-Extra country is claimed but none of the Extra slots have been touched, the bot DMs you a list of which Extra countries are still open. This fires once — it\'s your cue that the main roster is full and you may want to open extras to latecomers.\n\n**2. Everything claimed**\nWhen every country — mains and extras — is claimed, you get a second DM confirming the list is completely full.\n\nBoth DMs fire **at most once per list**, so you won\'t get spammed.',
-      },
-      {
-        name: 'When to use Extras',
-        value: '• You\'re running a game with a fixed roster but want backup slots ready if more players show up\n• You want to open a second wave of claiming without manually adding countries mid-event\n• You want the bot to alert you the moment all guaranteed slots are filled so you can start prep while extras trickle in',
-      },
-    ],
-  },
-
   resets: {
     label: '🗑️ Resets',
     color: 0xff4444,
@@ -320,14 +287,65 @@ const CATEGORIES = {
     ],
   },
 
+  // ── Section 2 ──────────────────────────────────────────────────────────────
+
+  s2overview: {
+    label: '📦 Overview',
+    color: 0x1abc9c,
+    fields: [
+      {
+        name: 'Section 2 — Game Mechanics',
+        value: 'This section covers game-specific mechanics that go beyond commands — how certain features behave, what to expect, and when to use them.',
+      },
+      {
+        name: '📦 Extras — overflow country slots',
+        value: 'Countries with `(Extra)` in their name are treated as backup slots. They appear in the embed and dropdown like any other country, but the bot handles them differently under the hood — you get a DM the moment all main countries fill up so you know extras are still available.\n\nClick **📦 Extras** below to see the full breakdown.',
+      },
+    ],
+  },
+
+  extras: {
+    label: '📦 Extras',
+    color: 0x1abc9c,
+    fields: [
+      {
+        name: 'What are Extra countries?',
+        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown exactly like any other country — players see and claim them the same way. The only difference is how the bot treats them internally.',
+      },
+      {
+        name: 'How to add Extra countries',
+        value: 'Just include `(Extra)` anywhere in the country name when creating or importing a list:\n\n**In `/create_handpick`:**\n`faction1_countries:Germany, France, Spain (Extra), Portugal (Extra)`\n\n**In `/import_handpick`:**\n```\n[Allies]\nUSA\nUK\nCanada (Extra)\nAustralia (Extra)\n```\n\nYou can also add them to a saved preset via `/edit_preset` → **Add Countries**.',
+      },
+      {
+        name: '📬 The two DMs you get as host',
+        value: '**1. All mains filled, no extras taken yet**\nWhen every non-Extra country is claimed but none of the Extra slots have been touched, the bot DMs you a list of which Extra countries are still open. This fires once — it\'s your cue that the main roster is full and you may want to open extras to latecomers.\n\n**2. Everything claimed**\nWhen every country — mains and extras — is claimed, you get a second DM confirming the list is completely full.\n\nBoth DMs fire **at most once per list**, so you won\'t get spammed.',
+      },
+      {
+        name: 'When to use Extras',
+        value: '• You\'re running a game with a fixed roster but want backup slots ready if more players show up\n• You want to open a second wave of claiming without manually adding countries mid-event\n• You want the bot to alert you the moment all guaranteed slots are filled so you can start prep while extras trickle in',
+      },
+    ],
+  },
+
 };
 
-// ─── Button rows ──────────────────────────────────────────────────────────────
-const ROW1_KEYS = ['overview', 'creating', 'editing', 'presets', 'watcher'];
-const ROW2_KEYS = ['restrictions', 'awards', 'majors', 'teams', 'resets'];
-const ROW3_KEYS = ['extras'];
+// ─── Section layouts ──────────────────────────────────────────────────────────
+const S1_ROW1 = ['overview', 'creating', 'editing', 'presets', 'watcher'];
+const S1_ROW2 = ['restrictions', 'awards', 'majors', 'teams', 'resets'];
+const S2_KEYS = ['s2overview', 'extras'];
 
-function buildRows(activeKey) {
+// Top-level: two section buttons
+function buildSectionPicker() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('guide_section__1').setLabel('Section 1').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('guide_section__2').setLabel('Section 2').setStyle(ButtonStyle.Success),
+    ),
+  ];
+}
+
+// Section 1: 2 rows of 5 category buttons + back row
+function buildSection1Rows(activeKey) {
   function btn(key) {
     const cat    = CATEGORIES[key];
     const active = key === activeKey;
@@ -335,24 +353,56 @@ function buildRows(activeKey) {
       ? (active ? ButtonStyle.Success : ButtonStyle.Danger)
       : (active ? ButtonStyle.Success : ButtonStyle.Primary);
     return new ButtonBuilder()
-      .setCustomId(`guide_btn__${key}`)
+      .setCustomId(`guide_s1__${key}`)
       .setLabel(cat.label)
       .setStyle(style)
       .setDisabled(active);
   }
   return [
-    new ActionRowBuilder().addComponents(ROW1_KEYS.map(btn)),
-    new ActionRowBuilder().addComponents(ROW2_KEYS.map(btn)),
-    new ActionRowBuilder().addComponents(ROW3_KEYS.map(btn)),
+    new ActionRowBuilder().addComponents(S1_ROW1.map(btn)),
+    new ActionRowBuilder().addComponents(S1_ROW2.map(btn)),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('guide_sections').setLabel('← Sections').setStyle(ButtonStyle.Secondary),
+    ),
+  ];
+}
+
+// Section 2: category buttons + back in one row
+function buildSection2Rows(activeKey) {
+  function btn(key) {
+    const cat    = CATEGORIES[key];
+    const active = key === activeKey;
+    return new ButtonBuilder()
+      .setCustomId(`guide_s2__${key}`)
+      .setLabel(cat.label)
+      .setStyle(active ? ButtonStyle.Success : ButtonStyle.Primary)
+      .setDisabled(active);
+  }
+  return [
+    new ActionRowBuilder().addComponents(
+      ...S2_KEYS.map(btn),
+      new ButtonBuilder().setCustomId('guide_sections').setLabel('← Sections').setStyle(ButtonStyle.Secondary),
+    ),
   ];
 }
 
 // ─── Embeds ───────────────────────────────────────────────────────────────────
+const SECTION_PICKER_EMBED = new EmbedBuilder()
+  .setTitle('📖 Host Guide')
+  .setDescription('Choose a section below.')
+  .addFields(
+    { name: '📘 Section 1 — Commands', value: 'Full reference for every bot command, organised by category.' },
+    { name: '📦 Section 2 — Mechanics', value: 'How specific game mechanics work: Extra countries and more.' },
+  )
+  .setColor(0x5865f2)
+  .setFooter({ text: 'Click a section button to get started' });
+
 function buildEmbed(key) {
   const cat = CATEGORIES[key];
-  const footer = key === 'overview'
-    ? 'Click a category button below to see full command details'
-    : 'Active button is greyed out · ⚡ Overview to go back';
+  const isOverview = key === 'overview' || key === 's2overview';
+  const footer = isOverview
+    ? 'Click a category button below to see full details'
+    : 'Active button is greyed out · use ← Sections to go back';
   return new EmbedBuilder()
     .setTitle(cat.label)
     .addFields(cat.fields)
@@ -364,25 +414,52 @@ function buildEmbed(key) {
 const guideCommands = [
   new SlashCommandBuilder()
     .setName('host_guide')
-    .setDescription('Open the host guide — quick overview and full command reference by category')
+    .setDescription('Open the host guide — command reference and game mechanics')
     .toJSON(),
 ];
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 function setupGuide(client) {
+  // /host_guide → section picker
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'host_guide') return;
     if (!isHost(interaction.member)) return denyHost(interaction);
-    return interaction.reply({ embeds: [buildEmbed('overview')], components: buildRows('overview') });
+    return interaction.reply({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
   });
 
   client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
-    if (!interaction.customId.startsWith('guide_btn__')) return;
-    const key = interaction.customId.replace('guide_btn__', '');
-    if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
-    return interaction.update({ embeds: [buildEmbed(key)], components: buildRows(key) });
+    const { customId } = interaction;
+
+    // Back to section picker
+    if (customId === 'guide_sections') {
+      return interaction.update({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
+    }
+
+    // Section 1 landing
+    if (customId === 'guide_section__1') {
+      return interaction.update({ embeds: [buildEmbed('overview')], components: buildSection1Rows('overview') });
+    }
+
+    // Section 2 landing
+    if (customId === 'guide_section__2') {
+      return interaction.update({ embeds: [buildEmbed('s2overview')], components: buildSection2Rows('s2overview') });
+    }
+
+    // Section 1 category button
+    if (customId.startsWith('guide_s1__')) {
+      const key = customId.replace('guide_s1__', '');
+      if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
+      return interaction.update({ embeds: [buildEmbed(key)], components: buildSection1Rows(key) });
+    }
+
+    // Section 2 category button
+    if (customId.startsWith('guide_s2__')) {
+      const key = customId.replace('guide_s2__', '');
+      if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
+      return interaction.update({ embeds: [buildEmbed(key)], components: buildSection2Rows(key) });
+    }
   });
 }
 
