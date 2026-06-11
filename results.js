@@ -93,7 +93,7 @@ const resultsCommands = [
     .setName('edit_result')
     .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
     .addStringOption(o => o.setName('result_name').setDescription('Current event name of the result to edit').setRequired(true))
-    .addStringOption(o => o.setName('faction1_name').setDescription('First faction name').setRequired(true))
+    .addStringOption(o => o.setName('faction1_name').setDescription('First faction name (leave blank to keep current factions)'))
     .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
     .addUserOption(o => o.setName('faction1_hm1').setDescription('HM 1 of faction 1'))
     .addUserOption(o => o.setName('faction1_hm2').setDescription('HM 2 of faction 1'))
@@ -173,19 +173,20 @@ function setupResults(client) {
 
       const resultName = interaction.options.getString('result_name')?.trim().toLowerCase();
       const guildData  = allResults[guildId] || {};
-      const entry      = Object.entries(guildData).find(([, r]) => r.eventName.toLowerCase() === resultName);
-      if (!entry) {
+      // If multiple results share the same name, edit the most recent one
+      const matches    = Object.entries(guildData)
+        .filter(([, r]) => r.eventName.toLowerCase() === resultName)
+        .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+      if (!matches.length) {
         return interaction.editReply({ content: `❌ No result found with the name **"${interaction.options.getString('result_name')}"**. Use \`/list_results\` to see saved names.` });
       }
-      const [resultId, existing] = entry;
+      const [resultId, existing] = matches[0];
 
       const newEventName = interaction.options.getString('event_name')?.trim() || existing.eventName;
       const summary      = interaction.options.getString('summary') ?? existing.summary ?? '';
-      const factions     = readFactions(interaction);
-
-      if (!factions.length) {
-        return interaction.editReply({ content: '❌ At least one faction is required.' });
-      }
+      // No faction options given → keep the existing factions/awards untouched
+      const provided = readFactions(interaction);
+      const factions = provided.length ? provided : existing.factions;
 
       // Diff old vs new awards and adjust leaderboard
       const countAwards = (factionList, type) => {

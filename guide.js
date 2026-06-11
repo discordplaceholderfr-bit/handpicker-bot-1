@@ -213,7 +213,7 @@ const CATEGORIES = {
       },
       {
         name: '`/edit_result` — Admin',
-        value: 'Edit a previously posted result. Pick the result from a dropdown, then re-enter the faction and award data. The bot **automatically adjusts the leaderboard** — users removed lose their awards, users added gain them. The original embed in the channel is edited in-place.',
+        value: 'Edit a previously posted result by name — only `result_name` is required; every other option is optional. Leave the faction options blank to keep the current factions and awards, or fill them in to replace them. If two results share the same name, the **most recent** one is edited. The bot **automatically adjusts the leaderboard** and edits the original embed in-place.',
       },
       {
         name: '`/list_results`',
