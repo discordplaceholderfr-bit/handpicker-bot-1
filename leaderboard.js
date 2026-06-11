@@ -365,6 +365,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       const targetGuildId = interaction.customId.split('__')[1];
       lb[targetGuildId] = {};
       saveLB(lb);
+      refreshRankingsMessage(targetGuildId).catch(() => {});
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Leaderboard Reset')
         .setDescription('The server leaderboard has been completely wiped. All MVPs and HMs cleared.')
@@ -378,6 +379,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       const targetUserId  = parts[2];
       delete lb[targetGuildId]?.[targetUserId];
       saveLB(lb);
+      refreshRankingsMessage(targetGuildId).catch(() => {});
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Player Removed')
         .setDescription(`<@${targetUserId}> has been removed from the leaderboard.`)

@@ -306,6 +306,7 @@ function setupResults(client) {
         }
         delete allResults[guildId][resultId];
         saveResults(allResults);
+        refreshRankingsMessage(guildId).catch(() => {});
       }
       return interaction.update({ content: '🗑️ Event result deleted and awards removed.', embeds: [], components: [] });
     }
@@ -325,6 +326,7 @@ function setupResults(client) {
       }
       allResults[guildId] = {};
       saveResults(allResults);
+      refreshRankingsMessage(guildId).catch(() => {});
       return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }
   });
