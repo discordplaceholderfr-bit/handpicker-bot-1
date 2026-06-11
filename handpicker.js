@@ -149,6 +149,20 @@ async function fireListExpiry(client, gameId) {
   }, LIST_EXPIRY_AUTO_CANCEL_MS);
 }
 
+// ── Extras lock: an (Extra) country can only be claimed once every main slot is taken ──
+function extrasStillLocked(game, country) {
+  if (!/\(extra\)/i.test(country)) return false;
+  const claimedSet = new Set(
+    Object.values(game.factions).flatMap(f =>
+      Object.entries(f.claims || {}).filter(([, v]) => v).map(([k]) => k)
+    )
+  );
+  const mainCountries = Object.values(game.factions)
+    .flatMap(f => f.countries)
+    .filter(c => !/\(extra\)/i.test(c));
+  return mainCountries.some(c => !claimedSet.has(c));
+}
+
 // ── Notify host on full fill or main-only fill ────────────────────────────────
 async function checkClaimNotifications(client, gameId, game) {
   const allCountries     = Object.values(game.factions).flatMap(f => f.countries);
@@ -515,6 +529,8 @@ function setupHandpicker(client) {
         const match = faction.countries.find(c => c.toLowerCase() === country.toLowerCase());
         if (match) {
           if (faction.claims[match]) return interaction.reply({ content: `❌ **${match}** is already claimed.`, ephemeral: true });
+          // Extras lock check
+          if (extrasStillLocked(game, match)) return interaction.reply({ content: `❌ **${match}** is an **Extra** slot — it unlocks once all main countries are claimed.`, ephemeral: true });
           // Major country check
           if (match.startsWith('*')) {
             const approvedRoles = majorRoles[guildId] || [];
@@ -822,6 +838,8 @@ function setupHandpicker(client) {
       }
     }
     if (faction.claims[country]) return interaction.reply({ content: `❌ **${country}** was just claimed by someone else!`, ephemeral: true });
+    // Extras lock check
+    if (extrasStillLocked(game, country)) return interaction.reply({ content: `❌ **${country}** is an **Extra** slot — it unlocks once all main countries are claimed.`, ephemeral: true });
     // Major country check
     if (country.startsWith('*')) {
       const approvedRoles = majorRoles[guildId] || [];

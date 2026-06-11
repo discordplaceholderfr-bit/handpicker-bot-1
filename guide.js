@@ -306,7 +306,7 @@ const CATEGORIES = {
     fields: [
       {
         name: 'What are Extra countries?',
-        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown exactly like any other country — players see and claim them the same way. The only difference is how the bot treats them internally.',
+        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown like any other country, but they are **locked until every main (non-Extra) country is claimed**. Anyone who tries to claim one early is told it unlocks once the main slots are full.',
       },
       {
         name: 'How to add Extra countries',
