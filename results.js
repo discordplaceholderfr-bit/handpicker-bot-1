@@ -92,7 +92,7 @@ const resultsCommands = [
   new SlashCommandBuilder()
     .setName('edit_result')
     .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
-    .addStringOption(o => o.setName('result_name').setDescription('Current event name of the result to edit').setRequired(true))
+    .addStringOption(o => o.setName('result_name').setDescription('Pick the result to edit (most recent first)').setRequired(true).setAutocomplete(true))
     .addStringOption(o => o.setName('faction1_name').setDescription('First faction name (leave blank to keep current factions)'))
     .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
     .addUserOption(o => o.setName('faction1_hm1').setDescription('HM 1 of faction 1'))
@@ -125,6 +125,23 @@ const resultsCommands = [
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 function setupResults(client) {
+
+  // ── Autocomplete: live result picker for /edit_result ───────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isAutocomplete()) return;
+    if (interaction.commandName !== 'edit_result') return;
+    try {
+      const typed   = interaction.options.getFocused().toLowerCase();
+      const entries = Object.entries(allResults[interaction.guildId] || {})
+        .filter(([, r]) => r.eventName.toLowerCase().includes(typed))
+        .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0))
+        .slice(0, 25);
+      await interaction.respond(entries.map(([id, r]) => ({
+        name: `${r.eventName} — ${new Date(r.createdAt).toLocaleDateString()}`.slice(0, 100),
+        value: id,
+      })));
+    } catch { /* autocomplete timed out */ }
+  });
 
   // ── Slash commands ──────────────────────────────────────────────────────────
   client.on('interactionCreate', async interaction => {
@@ -171,16 +188,23 @@ function setupResults(client) {
       await interaction.deferReply({ ephemeral: true });
       try {
 
-      const resultName = interaction.options.getString('result_name')?.trim().toLowerCase();
-      const guildData  = allResults[guildId] || {};
-      // If multiple results share the same name, edit the most recent one
-      const matches    = Object.entries(guildData)
-        .filter(([, r]) => r.eventName.toLowerCase() === resultName)
-        .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
-      if (!matches.length) {
-        return interaction.editReply({ content: `❌ No result found with the name **"${interaction.options.getString('result_name')}"**. Use \`/list_results\` to see saved names.` });
+      const rawName   = interaction.options.getString('result_name')?.trim();
+      const guildData = allResults[guildId] || {};
+      let resultId, existing;
+      if (guildData[rawName]) {
+        // Picked from the autocomplete list — value is the result ID
+        resultId = rawName;
+        existing = guildData[rawName];
+      } else {
+        // Typed manually — match by name; duplicates resolve to the most recent
+        const matches = Object.entries(guildData)
+          .filter(([, r]) => r.eventName.toLowerCase() === rawName?.toLowerCase())
+          .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+        if (!matches.length) {
+          return interaction.editReply({ content: `❌ No result found with the name **"${rawName}"**. Use \`/list_results\` to see saved names.` });
+        }
+        [resultId, existing] = matches[0];
       }
-      const [resultId, existing] = matches[0];
 
       const newEventName = interaction.options.getString('event_name')?.trim() || existing.eventName;
       const summary      = interaction.options.getString('summary') ?? existing.summary ?? '';

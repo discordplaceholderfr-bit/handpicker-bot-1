@@ -213,7 +213,7 @@ const CATEGORIES = {
       },
       {
         name: '`/edit_result` — Admin',
-        value: 'Edit a previously posted result by name — only `result_name` is required; every other option is optional. Leave the faction options blank to keep the current factions and awards, or fill them in to replace them. If two results share the same name, the **most recent** one is edited. The bot **automatically adjusts the leaderboard** and edits the original embed in-place.',
+        value: 'Edit a previously posted result. The `result_name` box shows a **live list of saved results (most recent first)** as you type — just click the one you want. Every other option is optional: leave the faction options blank to keep the current factions and awards, or fill them in to replace them. The bot **automatically adjusts the leaderboard** and edits the original embed in-place.',
       },
       {
         name: '`/list_results`',
