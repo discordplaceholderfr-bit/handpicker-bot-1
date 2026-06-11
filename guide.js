@@ -69,7 +69,7 @@ const CATEGORIES = {
         value: 'Creates a new handpick list with a title and up to 5 factions. Each faction gets its own claiming dropdown in the posted embed.\n\n**Example:**\n`/create_handpick title:WW2 Europe faction1_name:Axis faction1_countries:*Germany, Italy, *Japan faction2_name:Allies faction2_countries:USA, *UK, France`\n\nAfter running it you\'re asked if you want to pre-assign players before the list posts. Click **Add Preset Players** to open the assignment form or **Skip** to post immediately.\n\n**Major countries:** prefix any country name with `*` to make it Major (e.g. `*Prussia`). It displays as 🔸 Prussia in the embed and is locked behind approved Major roles.',
       },
       {
-        name: '📦 Extra countries',
+        name: 'Extra countries',
         value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then they open up for latecomers. You get a DM the moment all main slots fill so you know extras are still available.\n\nFull details in **Section 2 → 📦 Extras**.',
       },
       {
@@ -294,7 +294,7 @@ const CATEGORIES = {
   // ── Section 2 ──────────────────────────────────────────────────────────────
 
   s2overview: {
-    label: '📦 Overview',
+    label: '⚡ Overview',
     color: 0x1abc9c,
     fields: [
       {
@@ -392,7 +392,7 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
   .setDescription('Choose a section below.')
   .addFields(
     { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Resets' },
-    { name: 'Section 2', value: '📦 Overview · 📦 Extras' },
+    { name: 'Section 2', value: '⚡ Overview · 📦 Extras' },
   )
   .setColor(0x5865f2)
   .setFooter({ text: 'Click a section button to get started' });
