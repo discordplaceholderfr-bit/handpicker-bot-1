@@ -18,44 +18,40 @@ const CATEGORIES = {
     color: 0x5865f2,
     fields: [
       {
-        name: '📋 Creating lists',
-        value: '`/create_handpick` — build a list from scratch with a title and up to 5 factions.\n`/import_handpick` — paste a pre-written list into a popup (fastest when you already have it written).\n`/add_faction` — add a faction to an already active list.\n\nPrefix any country with `*` to mark it as a Major (e.g. `*Prussia`) — it shows as 🔸 and requires an approved role to claim.',
+        name: '📋 Creating',
+        value: 'Build handpick lists with factions and countries — from scratch, by pasting pre-written text, or by adding factions to a live list. Players can also be pre-assigned to countries before the list posts.',
       },
       {
-        name: '💾 Presets — the fastest way to run events',
-        value: '1. Build a list once with `/create_handpick`\n2. Save it with `/save_preset name:Your Name`\n3. Next event: `/load_preset` → pick it → list posts instantly\n4. Need to tweak it? `/edit_preset` — no need to rebuild from scratch',
+        name: '✏️ Editing',
+        value: 'Change a live list without recreating it — remove a player\'s claim, drop a country or a whole faction, or let two players swap countries with mutual confirmation.',
       },
       {
-        name: '📊 Schedule — hands-free list posting',
-        value: 'Set up with `/setup_schedule` — the bot posts a reaction embed and watches it. When ✅ reactions hit the threshold the preset fires automatically.\n\nAlternatively, `/setup_schedule` with a custom preset and threshold handles the whole flow: players react, bot fires the list, pings your event role, and DMs you when the list locks.',
+        name: '💾 Presets',
+        value: 'Save a list once and redeploy it any time. Presets can be previewed, edited, renamed, and deleted, and they survive bot restarts.',
       },
       {
-        name: '✏️ Editing active lists',
-        value: '`/remove_player` — remove a player\'s claim (by tag or dropdown).\n`/remove_nation` — remove a country from a list entirely.\n`/remove_faction` — remove a whole faction.\n`/swap` — let two players swap countries (both must accept within 2 minutes).\n`/add_preset_players` — bulk pre-assign players to countries via a text popup.',
+        name: '📊 Schedule',
+        value: 'Hands-free event setup — the bot posts a reaction embed, counts votes, and automatically fires a preset list once enough players react. Schedules can be delayed, listed, and removed.',
       },
       {
-        name: '🎖️ Teams — automatic role assignment',
-        value: 'When a player claims a country the bot gives them the mapped Discord role automatically, and strips it on unclaim. Roles named **Team 1**, **Team 2**, etc. are auto-mapped to factions on list creation — no setup needed. Use `/setup_team` to manually map a faction to any role.',
+        name: '🚫 Restrictions',
+        value: 'Keep the vote count and claims clean — exclude individual votes from a schedule, undo exclusions, and temporarily blacklist players from claiming in any list.',
       },
       {
-        name: '⭐ Majors — controlling who claims big countries',
-        value: 'Any country whose name starts with `*` (e.g. `*Prussia`) is a Major country, locked behind approved roles. Use `/major_role role:@Role` to toggle a role on/off the approved list. Players without an approved role get blocked when they try to claim one.',
+        name: '🏆 Awards',
+        value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, and post event results that log awards automatically.',
       },
       {
-        name: '🚫 Restrictions — keeping the count clean',
-        value: '`/exclude_check` removes a player\'s vote from the schedule count (logged to #homage-poll-log). `/remove_exclusion` undoes it. `/blacklist` stops a player from claiming in any list for a set duration — they see the reason and time remaining on every failed attempt.',
+        name: '⭐ Majors',
+        value: 'Lock important countries behind approved roles. Countries marked as Major can only be claimed by players holding one of the roles you approve.',
       },
       {
-        name: '🏆 Awards & Rankings',
-        value: '`/give_mvp` and `/give_hm` give awards manually *(1 MVP = 2 pts · 1 HM = 1 pt)*. `/rankings` shows the full leaderboard with server stats. Use `/remove_mvp` or `/remove_hm` to correct mistakes.',
+        name: '🎖️ Teams',
+        value: 'Automatic Discord role assignment — when a player claims a country they get their faction\'s role, and lose it when they unclaim. Mappings can be automatic or set manually.',
       },
       {
-        name: '🏁 Results — post outcomes and auto-log awards',
-        value: 'After an event ends, `/post_results` posts a results embed and logs MVPs/HMs to the leaderboard in one step — up to 2 factions, users tagged directly via mention.\n\n`/edit_result` lets you re-pick the result and adjusts the leaderboard automatically.',
-      },
-      {
-        name: '📬 When does the bot DM you?',
-        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country (including Extras) is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed `(Extra)` countries the moment all main slots fill but no extras have been taken yet.\n\nAll three only fire once per list. See **Section 2 → 📦 Extras** for full details on how Extra countries work.',
+        name: '🗑️ Resets',
+        value: 'Cleanup commands — delete or wipe lists, presets, leaderboard entries, team mappings, schedules, and results, individually or all at once.',
       },
     ],
   },
@@ -298,8 +294,8 @@ const CATEGORIES = {
     color: 0x1abc9c,
     fields: [
       {
-        name: '📦 Extras — overflow country slots',
-        value: 'Countries with `(Extra)` in their name are treated as backup slots. They appear in the embed and dropdown like any other country, but the bot handles them differently under the hood — you get a DM the moment all main countries fill up so you know extras are still available.',
+        name: '📦 Extras',
+        value: 'Overflow country slots that stay locked until every main country is claimed, then open up for latecomers. The bot DMs the host when the main roster fills so they know extras are available.',
       },
     ],
   },
