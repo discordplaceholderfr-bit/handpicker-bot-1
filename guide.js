@@ -69,6 +69,10 @@ const CATEGORIES = {
         value: 'Creates a new handpick list with a title and up to 5 factions. Each faction gets its own claiming dropdown in the posted embed.\n\n**Example:**\n`/create_handpick title:WW2 Europe faction1_name:Axis faction1_countries:*Germany, Italy, *Japan faction2_name:Allies faction2_countries:USA, *UK, France`\n\nAfter running it you\'re asked if you want to pre-assign players before the list posts. Click **Add Preset Players** to open the assignment form or **Skip** to post immediately.\n\n**Major countries:** prefix any country name with `*` to make it Major (e.g. `*Prussia`). It displays as 🔸 Prussia in the embed and is locked behind approved Major roles.',
       },
       {
+        name: '📦 Extra countries',
+        value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then they open up for latecomers. You get a DM the moment all main slots fill so you know extras are still available.\n\nFull details in **Section 2 → 📦 Extras**.',
+      },
+      {
         name: '`/import_handpick` — Host',
         value: 'Import a list by pasting formatted text into a popup instead of typing every country as a command option. Best used when you already have the list written out somewhere.\n\n**Format:**\n```\n[Faction Name]\n*Prussia\nCountry 2\n\n[Another Faction]\nCountry 3\n```\nPrefix any country with `*` to mark it as Major — it displays as 🔸 in the embed and requires an approved Major role to claim.',
       },
@@ -79,10 +83,6 @@ const CATEGORIES = {
       {
         name: '`/add_preset_players` — Host',
         value: 'Bulk pre-assign players to countries using a text popup. One entry per line — paste the country name, a colon, then the player\'s Discord User ID (right-click their name → Copy ID).\n\n**Format:**\n```\nGermany: 123456789012345678\nFrance: 987654321098765432\nRussia: 111222333444555666\n```\nWorks before the list posts (during setup) and on live lists. If a country is already claimed it overwrites the old claim.',
-      },
-      {
-        name: '📦 Extra countries',
-        value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then they open up for latecomers. You get a DM the moment all main slots fill so you know extras are still available.\n\nFull details in **Section 2 → 📦 Extras**.',
       },
     ],
   },
