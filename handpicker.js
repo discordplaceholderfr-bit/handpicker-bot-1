@@ -149,18 +149,12 @@ async function fireListExpiry(client, gameId) {
   }, LIST_EXPIRY_AUTO_CANCEL_MS);
 }
 
-// ── Extras lock: an (Extra) country can only be claimed once every main slot is taken ──
+// ── Extras lock: (Extra) countries are unclaimable until the host opens them ──
+// When all main slots fill, the host gets a DM with Open/Remove buttons; only
+// "Open Extras" sets game.extrasOpen and lifts the lock.
 function extrasStillLocked(game, country) {
   if (!/\(extra\)/i.test(country)) return false;
-  const claimedSet = new Set(
-    Object.values(game.factions).flatMap(f =>
-      Object.entries(f.claims || {}).filter(([, v]) => v).map(([k]) => k)
-    )
-  );
-  const mainCountries = Object.values(game.factions)
-    .flatMap(f => f.countries)
-    .filter(c => !/\(extra\)/i.test(c));
-  return mainCountries.some(c => !claimedSet.has(c));
+  return !game.extrasOpen;
 }
 
 // ── Notify host on full fill or main-only fill ────────────────────────────────
@@ -191,11 +185,18 @@ async function checkClaimNotifications(client, gameId, game) {
       game._dmSentMainFull = true;
       save(GAMES_FILE, games);
       const remaining = extraCountries.filter(c => !claimedSet.has(c)).map(c => `• ${c}`).join('\n');
-      await host.send({ embeds: [new EmbedBuilder()
-        .setTitle('⚠️ Main Slots Filled — Extras Remaining')
-        .setDescription(`All main countries in **"${game.title}"** are claimed!\n\nThese **Extra** spots are still open:\n${remaining}`)
-        .setColor(0xffa500).setTimestamp()
-      ]});
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`extras_open__${gameId}`).setLabel('Open Extras').setStyle(ButtonStyle.Success).setEmoji('📦'),
+        new ButtonBuilder().setCustomId(`extras_remove__${gameId}`).setLabel('Remove Extras').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
+      );
+      await host.send({
+        embeds: [new EmbedBuilder()
+          .setTitle('⚠️ Main Slots Filled — Open Extras?')
+          .setDescription(`All main countries in **"${game.title}"** are claimed!\n\nThese **Extra** spots are waiting:\n${remaining}\n\nDo you want to open them for claiming?\n📦 **Open Extras** — announces in the channel that extras are claimable\n🗑️ **Remove Extras** — deletes them from the list and announces it`)
+          .setColor(0xffa500).setTimestamp()
+        ],
+        components: [row],
+      });
     }
   } catch (e) { console.warn('checkClaimNotifications error:', e.message); }
 }
@@ -530,7 +531,7 @@ function setupHandpicker(client) {
         if (match) {
           if (faction.claims[match]) return interaction.reply({ content: `❌ **${match}** is already claimed.`, ephemeral: true });
           // Extras lock check
-          if (extrasStillLocked(game, match)) return interaction.reply({ content: `❌ **${match}** is an **Extra** slot — it unlocks once all main countries are claimed.`, ephemeral: true });
+          if (extrasStillLocked(game, match)) return interaction.reply({ content: `❌ **${match}** is an **Extra** slot — it unlocks once all main countries are claimed and the host opens extras.`, ephemeral: true });
           // Major country check
           if (match.startsWith('*')) {
             const approvedRoles = majorRoles[guildId] || [];
@@ -839,7 +840,7 @@ function setupHandpicker(client) {
     }
     if (faction.claims[country]) return interaction.reply({ content: `❌ **${country}** was just claimed by someone else!`, ephemeral: true });
     // Extras lock check
-    if (extrasStillLocked(game, country)) return interaction.reply({ content: `❌ **${country}** is an **Extra** slot — it unlocks once all main countries are claimed.`, ephemeral: true });
+    if (extrasStillLocked(game, country)) return interaction.reply({ content: `❌ **${country}** is an **Extra** slot — it unlocks once all main countries are claimed and the host opens extras.`, ephemeral: true });
     // Major country check
     if (country.startsWith('*')) {
       const approvedRoles = majorRoles[guildId] || [];
@@ -854,6 +855,42 @@ function setupHandpicker(client) {
       const { assignTeam } = require('./teams');
       await assignTeam(interaction.guild, userId, factionName);
     }
+  });
+
+  // ── Extras open/remove buttons (sent to the host via DM) ────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    const { customId } = interaction;
+    if (!customId.startsWith('extras_open__') && !customId.startsWith('extras_remove__')) return;
+    const gameId = customId.split('__')[1];
+    const game   = games[gameId];
+    if (!game) return interaction.update({ content: '❌ This handpick list no longer exists.', embeds: [], components: [] });
+
+    if (customId.startsWith('extras_open__')) {
+      game.extrasOpen = true;
+      save(GAMES_FILE, games);
+      try {
+        const channel = await client.channels.fetch(game.channelId);
+        await channel.send(`📦 All main countries in **"${game.title}"** are claimed — **Extra countries are now claimable!**`);
+      } catch (e) { console.warn('Could not announce extras open:', e.message); }
+      return interaction.update({ content: `✅ Extras for **"${game.title}"** are now open — the channel has been notified.`, embeds: [], components: [] });
+    }
+
+    // Remove all (Extra) countries from the list
+    for (const faction of Object.values(game.factions)) {
+      for (const c of faction.countries.filter(x => /\(extra\)/i.test(x))) {
+        faction.countries = faction.countries.filter(x => x !== c);
+        delete faction.claims[c];
+      }
+    }
+    save(GAMES_FILE, games);
+    await refreshMessage(client, gameId, game);
+    try {
+      const channel = await client.channels.fetch(game.channelId);
+      await channel.send(`🗑️ The **Extra** countries in **"${game.title}"** have been removed — the list is now main slots only.`);
+    } catch (e) { console.warn('Could not announce extras removal:', e.message); }
+    checkClaimNotifications(client, gameId, game).catch(() => {});
+    return interaction.update({ content: `✅ Extras removed from **"${game.title}"** — the channel has been notified.`, embeds: [], components: [] });
   });
 
   client.on('interactionCreate', async interaction => {

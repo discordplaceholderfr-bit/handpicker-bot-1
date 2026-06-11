@@ -66,7 +66,7 @@ const CATEGORIES = {
       },
       {
         name: 'Extra countries',
-        value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then they open up for latecomers. You get a DM the moment all main slots fill so you know extras are still available.\n\nFull details in **Section 2 → 📦 Extras**.',
+        value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then the bot DMs you asking whether to open them (announced in the channel) or remove them from the list.\n\nFull details in **Section 2 → 📦 Extras**.',
       },
       {
         name: '`/import_handpick` — Host',
@@ -295,7 +295,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '📦 Extras',
-        value: 'Overflow country slots that stay locked until every main country is claimed, then open up for latecomers. The bot DMs the host when the main roster fills so they know extras are available.',
+        value: 'Overflow country slots that stay locked until every main country is claimed. The bot then DMs the host to either open them for claiming (announced in the channel) or remove them from the list.',
       },
     ],
   },
@@ -306,15 +306,15 @@ const CATEGORIES = {
     fields: [
       {
         name: 'What are Extra countries?',
-        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown like any other country, but they are **locked until every main (non-Extra) country is claimed**. Anyone who tries to claim one early is told it unlocks once the main slots are full.',
+        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown like any other country, but they are **locked until every main (non-Extra) country is claimed AND you open them** via the DM the bot sends you. Anyone who tries to claim one early is told it\'s still locked.',
       },
       {
         name: 'How to add Extra countries',
         value: 'Just include `(Extra)` anywhere in the country name when creating or importing a list:\n\n**In `/create_handpick`:**\n`faction1_countries:Germany, France, Spain (Extra), Portugal (Extra)`\n\n**In `/import_handpick`:**\n```\n[Allies]\nUSA\nUK\nCanada (Extra)\nAustralia (Extra)\n```\n\nYou can also add them to a saved preset via `/edit_preset` → **Add Countries**.',
       },
       {
-        name: '📬 The two DMs you get as host',
-        value: '**1. All mains filled, no extras taken yet**\nWhen every non-Extra country is claimed but none of the Extra slots have been touched, the bot DMs you a list of which Extra countries are still open. This fires once — it\'s your cue that the main roster is full and you may want to open extras to latecomers.\n\n**2. Everything claimed**\nWhen every country — mains and extras — is claimed, you get a second DM confirming the list is completely full.\n\nBoth DMs fire **at most once per list**, so you won\'t get spammed.',
+        name: '📬 The DMs you get as host',
+        value: '**1. All mains filled — Open Extras?**\nWhen every non-Extra country is claimed, the bot DMs you the list of waiting Extra slots with two buttons:\n• 📦 **Open Extras** — extras become claimable and the bot announces it in the list\'s channel\n• 🗑️ **Remove Extras** — extras are deleted from the list and the channel is told the list is mains-only\n\n**2. Everything claimed**\nWhen every country — mains and extras — is claimed, you get a second DM confirming the list is completely full.\n\nBoth DMs fire **at most once per list**, so you won\'t get spammed.',
       },
       {
         name: 'When to use Extras',
