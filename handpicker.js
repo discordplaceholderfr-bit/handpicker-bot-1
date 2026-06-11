@@ -57,6 +57,19 @@ const AUTO_RESET_MS  = 3 * 60 * 60 * 1000;
 const gameResetTimers = {};
 let   _client        = null;
 
+// Strip team roles from everyone who had a claim in a (deleted) game
+async function stripAllTeamRoles(client, game) {
+  try {
+    const guild = await client.guilds.fetch(game.guildId);
+    const { removeTeam } = require('./teams');
+    for (const [factionName, faction] of Object.entries(game.factions || {})) {
+      for (const uid of Object.values(faction.claims || {})) {
+        if (uid) await removeTeam(guild, uid, factionName).catch(() => {});
+      }
+    }
+  } catch (e) { console.warn('Could not strip team roles:', e.message); }
+}
+
 function scheduleGameReset(client, gameId) {
   if (gameResetTimers[gameId]) clearTimeout(gameResetTimers[gameId]);
   const game = games[gameId];
@@ -70,6 +83,7 @@ function scheduleGameReset(client, gameId) {
     delete games[gameId];
     save(GAMES_FILE, games);
     console.log(`Auto-reset: deleted game ${gameId}`);
+    await stripAllTeamRoles(client, g);
     try {
       const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
@@ -138,6 +152,7 @@ async function fireListExpiry(client, gameId) {
     if (!g || !g.locked) return; // host already responded
     delete games[gameId];
     save(GAMES_FILE, games);
+    await stripAllTeamRoles(client, g);
     try {
       const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
