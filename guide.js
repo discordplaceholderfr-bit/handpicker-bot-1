@@ -80,6 +80,10 @@ const CATEGORIES = {
         name: '`/add_preset_players` — Host',
         value: 'Bulk pre-assign players to countries using a text popup. One entry per line — paste the country name, a colon, then the player\'s Discord User ID (right-click their name → Copy ID).\n\n**Format:**\n```\nGermany: 123456789012345678\nFrance: 987654321098765432\nRussia: 111222333444555666\n```\nWorks before the list posts (during setup) and on live lists. If a country is already claimed it overwrites the old claim.',
       },
+      {
+        name: '📦 Extra countries',
+        value: 'Add `(Extra)` to any country name (e.g. `Spain (Extra)`) to make it an overflow slot. Extras are **locked until every main country is claimed** — then they open up for latecomers. You get a DM the moment all main slots fill so you know extras are still available.\n\nFull details in **Section 2 → 📦 Extras**.',
+      },
     ],
   },
 
