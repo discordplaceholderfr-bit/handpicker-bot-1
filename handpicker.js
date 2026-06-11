@@ -668,7 +668,7 @@ function setupHandpicker(client) {
     }
 
     if (commandName === 'major_role') {
-      if (!isHost(interaction.member)) return denyHost(interaction);
+      if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const role = interaction.options.getRole('role');
       if (!majorRoles[guildId]) majorRoles[guildId] = [];
       const idx = majorRoles[guildId].indexOf(role.id);
