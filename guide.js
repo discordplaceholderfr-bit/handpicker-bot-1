@@ -1,5 +1,3 @@
-const { isHost, denyHost } = require('./permissions');
-
 const {
   SlashCommandBuilder,
   EmbedBuilder,
@@ -428,7 +426,6 @@ function setupGuide(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'host_guide') return;
-    if (!isHost(interaction.member)) return denyHost(interaction);
     return interaction.reply({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
   });
 
