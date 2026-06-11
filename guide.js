@@ -294,12 +294,8 @@ const CATEGORIES = {
     color: 0x1abc9c,
     fields: [
       {
-        name: 'Section 2 — Game Mechanics',
-        value: 'This section covers game-specific mechanics that go beyond commands — how certain features behave, what to expect, and when to use them.',
-      },
-      {
         name: '📦 Extras — overflow country slots',
-        value: 'Countries with `(Extra)` in their name are treated as backup slots. They appear in the embed and dropdown like any other country, but the bot handles them differently under the hood — you get a DM the moment all main countries fill up so you know extras are still available.\n\nClick **📦 Extras** below to see the full breakdown.',
+        value: 'Countries with `(Extra)` in their name are treated as backup slots. They appear in the embed and dropdown like any other country, but the bot handles them differently under the hood — you get a DM the moment all main countries fill up so you know extras are still available.',
       },
     ],
   },
@@ -391,8 +387,8 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
   .setTitle('📖 Host Guide')
   .setDescription('Choose a section below.')
   .addFields(
-    { name: '📘 Section 1 — Commands', value: 'Full reference for every bot command, organised by category.' },
-    { name: '📦 Section 2 — Mechanics', value: 'How specific game mechanics work: Extra countries and more.' },
+    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Resets' },
+    { name: 'Section 2', value: '📦 Overview · 📦 Extras' },
   )
   .setColor(0x5865f2)
   .setFooter({ text: 'Click a section button to get started' });
