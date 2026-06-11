@@ -53,7 +53,7 @@ const CATEGORIES = {
       },
       {
         name: '📬 When does the bot DM you?',
-        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed (Extra) countries if none have been picked yet.\n\nAll three only fire once per list.',
+        value: '• **List expiry fires** — DM with Extend / Reopen buttons. You have 10 minutes to respond or the list is auto-deleted.\n• **List fully filled** — DM when every country (including Extras) is claimed.\n• **Main slots filled, extras remain** — DM listing unclaimed `(Extra)` countries the moment all main slots fill but no extras have been taken yet.\n\nAll three only fire once per list. See the **📦 Extras** category for full details on how Extra countries work.',
       },
     ],
   },
@@ -266,6 +266,29 @@ const CATEGORIES = {
     ],
   },
 
+  extras: {
+    label: '📦 Extras',
+    color: 0x1abc9c,
+    fields: [
+      {
+        name: 'What are Extra countries?',
+        value: 'An **Extra** country is any country whose name contains `(Extra)` — for example `Spain (Extra)` or `Morocco (Extra)`. They act as **overflow slots**: there for the rare case you get more players than expected, but they don\'t need to be filled for the event to proceed normally.\n\nExtras appear in the embed and the claiming dropdown exactly like any other country — players see and claim them the same way. The only difference is how the bot treats them internally.',
+      },
+      {
+        name: 'How to add Extra countries',
+        value: 'Just include `(Extra)` anywhere in the country name when creating or importing a list:\n\n**In `/create_handpick`:**\n`faction1_countries:Germany, France, Spain (Extra), Portugal (Extra)`\n\n**In `/import_handpick`:**\n```\n[Allies]\nUSA\nUK\nCanada (Extra)\nAustralia (Extra)\n```\n\nYou can also add them to a saved preset via `/edit_preset` → **Add Countries**.',
+      },
+      {
+        name: '📬 The two DMs you get as host',
+        value: '**1. All mains filled, no extras taken yet**\nWhen every non-Extra country is claimed but none of the Extra slots have been touched, the bot DMs you a list of which Extra countries are still open. This fires once — it\'s your cue that the main roster is full and you may want to open extras to latecomers.\n\n**2. Everything claimed**\nWhen every country — mains and extras — is claimed, you get a second DM confirming the list is completely full.\n\nBoth DMs fire **at most once per list**, so you won\'t get spammed.',
+      },
+      {
+        name: 'When to use Extras',
+        value: '• You\'re running a game with a fixed roster but want backup slots ready if more players show up\n• You want to open a second wave of claiming without manually adding countries mid-event\n• You want the bot to alert you the moment all guaranteed slots are filled so you can start prep while extras trickle in',
+      },
+    ],
+  },
+
   resets: {
     label: '🗑️ Resets',
     color: 0xff4444,
@@ -302,6 +325,7 @@ const CATEGORIES = {
 // ─── Button rows ──────────────────────────────────────────────────────────────
 const ROW1_KEYS = ['overview', 'creating', 'editing', 'presets', 'watcher'];
 const ROW2_KEYS = ['restrictions', 'awards', 'majors', 'teams', 'resets'];
+const ROW3_KEYS = ['extras'];
 
 function buildRows(activeKey) {
   function btn(key) {
@@ -319,6 +343,7 @@ function buildRows(activeKey) {
   return [
     new ActionRowBuilder().addComponents(ROW1_KEYS.map(btn)),
     new ActionRowBuilder().addComponents(ROW2_KEYS.map(btn)),
+    new ActionRowBuilder().addComponents(ROW3_KEYS.map(btn)),
   ];
 }
 
