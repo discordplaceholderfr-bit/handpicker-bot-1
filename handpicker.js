@@ -1,4 +1,5 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
+const { auditLog } = require('./auditlog');
 
 const {
   ActionRowBuilder,
@@ -625,6 +626,7 @@ function setupHandpicker(client) {
       const expiresAt = Date.now() + ms;
       blacklist[guildId][target.id] = { reason, bannedBy: interaction.user.id, expiresAt };
       save(BLACKLIST_FILE, blacklist);
+      auditLog('🚫 Player Blacklisted', `<@${interaction.user.id}> blacklisted <@${target.id}> for **${durationStr}**.\n**Reason:** ${reason}`, 0xff4444);
       return interaction.reply({ embeds: [new EmbedBuilder()
         .setTitle('🚫 Player Blacklisted')
         .setColor(0xff4444)
@@ -642,6 +644,7 @@ function setupHandpicker(client) {
       if (!blacklist[guildId]?.[target.id]) return interaction.reply({ content: `❌ <@${target.id}> is not blacklisted.`, ephemeral: true });
       delete blacklist[guildId][target.id];
       save(BLACKLIST_FILE, blacklist);
+      auditLog('✅ Player Unblacklisted', `<@${interaction.user.id}> removed <@${target.id}> from the blacklist.`, 0x57f287);
       return interaction.reply({ content: `✅ <@${target.id}> has been removed from the blacklist.` });
     }
 
@@ -1322,6 +1325,7 @@ function setupHandpicker(client) {
       if (game && interaction.guild) await removeAllTeamRoles(interaction.guild, game);
       delete games[gameId];
       save(GAMES_FILE, games);
+      auditLog('🗑️ List Deleted', `<@${interaction.user.id}> deleted the handpick list **"${title}"**.`, 0xff4444);
       const embed = new EmbedBuilder().setTitle('🗑️ List Deleted').setDescription(`Handpick list **"${title}"** has been deleted.`).setColor(0xff4444).setTimestamp();
       return interaction.update({ embeds: [embed], components: [] });
     }
@@ -1333,6 +1337,7 @@ function setupHandpicker(client) {
       }
       for (const id of guildGameIds) { delete games[id]; }
       save(GAMES_FILE, games);
+      auditLog('🗑️ All Lists Reset', `<@${interaction.user.id}> wiped all handpick lists.`, 0xff4444);
       const embed = new EmbedBuilder().setTitle('🗑️ Lists Reset').setDescription(`All handpick lists for this server have been wiped.`).setColor(0xff4444).setTimestamp();
       return interaction.update({ embeds: [embed], components: [] });
     }

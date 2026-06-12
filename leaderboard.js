@@ -1,4 +1,5 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
+const { auditLog } = require('./auditlog');
 
 const {
   SlashCommandBuilder,
@@ -232,6 +233,7 @@ function setupLeaderboard(client) {
         .setColor(0xffd700).setTimestamp();
       await interaction.reply({ embeds: [embed] }); // public
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('⭐ MVP Given', `<@${interaction.user.id}> gave **${amount} MVP${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.mvps}).`, 0xffd700);
       return;
     }
 
@@ -253,6 +255,7 @@ function setupLeaderboard(client) {
         .setColor(0xc0c0c0).setTimestamp();
       await interaction.reply({ embeds: [embed] }); // public
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('🏅 HM Given', `<@${interaction.user.id}> gave **${amount} HM${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.hms}).`, 0xc0c0c0);
       return;
     }
 
@@ -266,6 +269,7 @@ function setupLeaderboard(client) {
       saveLB(lb);
       await interaction.reply({ content: `✅ Removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.mvps}**.` });
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('⭐ MVP Removed', `<@${interaction.user.id}> removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.mvps}).`, 0xed4245);
       return;
     }
 
@@ -279,6 +283,7 @@ function setupLeaderboard(client) {
       saveLB(lb);
       await interaction.reply({ content: `✅ Removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.hms}**.` });
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('🏅 HM Removed', `<@${interaction.user.id}> removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.hms}).`, 0xed4245);
       return;
     }
 
@@ -366,6 +371,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       lb[targetGuildId] = {};
       saveLB(lb);
       refreshRankingsMessage(targetGuildId).catch(() => {});
+      auditLog('🗑️ Leaderboard Reset', `<@${interaction.user.id}> wiped the entire leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Leaderboard Reset')
         .setDescription('The server leaderboard has been completely wiped. All MVPs and HMs cleared.')
@@ -380,6 +386,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       delete lb[targetGuildId]?.[targetUserId];
       saveLB(lb);
       refreshRankingsMessage(targetGuildId).catch(() => {});
+      auditLog('🗑️ Player Removed from Leaderboard', `<@${interaction.user.id}> removed <@${targetUserId}> from the leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Player Removed')
         .setDescription(`<@${targetUserId}> has been removed from the leaderboard.`)

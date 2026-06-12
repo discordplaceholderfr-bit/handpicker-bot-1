@@ -1,5 +1,6 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage } = require('./leaderboard');
+const { auditLog } = require('./auditlog');
 
 const {
   SlashCommandBuilder,
@@ -180,6 +181,7 @@ function setupResults(client) {
         saveResults(allResults);
       }
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('🏁 Results Posted', `<@${interaction.user.id}> posted results for **"${eventName}"** (${factions.map(f => f.name).join(' vs ')}).`, 0x57f287);
       return;
     }
 
@@ -249,6 +251,7 @@ function setupResults(client) {
       }
 
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('✏️ Result Edited', `<@${interaction.user.id}> edited the result **"${existing.eventName}"**.`, 0xfee75c);
       return interaction.editReply({ content: '✅ Result updated and leaderboard adjusted.' });
       } catch (e) {
         console.error('edit_result error:', e);
@@ -332,6 +335,7 @@ function setupResults(client) {
         delete allResults[guildId][resultId];
         saveResults(allResults);
         refreshRankingsMessage(guildId).catch(() => {});
+        auditLog('🗑️ Result Deleted', `<@${interaction.user.id}> deleted the result **"${result.eventName}"** (awards revoked).`, 0xff4444);
       }
       return interaction.update({ content: '🗑️ Event result deleted and awards removed.', embeds: [], components: [] });
     }
@@ -352,6 +356,7 @@ function setupResults(client) {
       allResults[guildId] = {};
       saveResults(allResults);
       refreshRankingsMessage(guildId).catch(() => {});
+      auditLog('🗑️ All Results Wiped', `<@${interaction.user.id}> wiped all event results (awards revoked).`, 0xff4444);
       return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }
   });

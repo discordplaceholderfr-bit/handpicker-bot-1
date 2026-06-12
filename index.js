@@ -8,6 +8,7 @@ const { setupImporter, importerCommands } = require('./importer');
 const { setupWatcher, watcherCommands } = require('./pollwatcher');
 const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
+const { initAuditLog } = require('./auditlog');
 
 process.setMaxListeners(100);
 
@@ -156,6 +157,7 @@ client.on('interactionCreate', interaction => {
   }
 });
 
+initAuditLog(client);
 setupHandpicker(client);
 setupLeaderboard(client);
 setupPresets(client);

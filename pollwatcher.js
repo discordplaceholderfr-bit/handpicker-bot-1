@@ -1,4 +1,5 @@
 const { isAdmin, denyAdmin, isHost, denyHost } = require('./permissions');
+const { auditLog } = require('./auditlog');
 const {
   SlashCommandBuilder,
   EmbedBuilder,
@@ -560,6 +561,7 @@ function setupWatcher(client) {
         if (countAfter < watcher.threshold) await resetWatcher(client, watcherId);
       }
       saveWatchers(watchers);
+      auditLog('🚫 Vote Excluded', `<@${interaction.user.id}> excluded <@${targetUser.id}>'s vote from **${guildWatchers.length}** schedule(s) for **${durationStr}**.\n**Reason:** ${reason}`, 0xff9900);
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setTitle('🚫 Vote Excluded')
@@ -916,6 +918,7 @@ function setupWatcher(client) {
     const name = watchers[watcherId]?.presetName ?? watcherId;
     delete watchers[watcherId];
     saveWatchers(watchers);
+    auditLog('🗑️ Schedule Removed', `<@${interaction.user.id}> removed the schedule for **"${name}"**.`, 0xff4444);
     return interaction.update({ content: `✅ Watcher for **"${name}"** removed.`, components: [] });
   });
 
@@ -957,6 +960,7 @@ function setupWatcher(client) {
     if (!excData) return interaction.update({ content: '❌ That exclusion no longer exists.', components: [] });
     delete watcher.exclusions[targetUserId];
     saveWatchers(watchers);
+    auditLog('✅ Exclusion Removed', `<@${interaction.user.id}> removed the vote exclusion for <@${targetUserId}> on **"${watcher.presetName}"**.`, 0x57f287);
     // Re-check threshold now that the vote is restored
     const count = await getEffectiveCount(client, watcherId);
     if (count >= watcher.threshold && !watcher.triggered) await triggerWatcher(client, watcherId);
@@ -1075,6 +1079,7 @@ function setupWatcher(client) {
         delete watchers[watcherId];
       }
       saveWatchers(watchers);
+      auditLog('🗑️ All Schedules Reset', `<@${interaction.user.id}> deleted all **${guildWatchers.length}** schedule(s).`, 0xff4444);
       return interaction.update({
         embeds: [new EmbedBuilder()
           .setTitle('🗑️ All Watchers Deleted')
