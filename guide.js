@@ -397,7 +397,7 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
     { name: 'Section 2', value: '⚡ Overview · 📦 Extras' },
   )
   .setColor(0x5865f2)
-  .setFooter({ text: 'Click a section button to get started' });
+  .setFooter({ text: 'Click a section button to get started · Tip: !guide also opens this' });
 
 function buildEmbed(key) {
   const cat = CATEGORIES[key];
@@ -427,6 +427,15 @@ function setupGuide(client) {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'host_guide') return;
     return interaction.reply({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
+  });
+
+  // !guide prefix command → same section picker
+  client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+    if (message.content.trim().toLowerCase() !== '!guide') return;
+    try {
+      await message.channel.send({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
+    } catch (e) { console.warn('!guide failed:', e.message); }
   });
 
   client.on('interactionCreate', async interaction => {
