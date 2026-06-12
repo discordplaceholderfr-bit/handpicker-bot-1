@@ -389,7 +389,7 @@ const watcherCommands = [
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
     .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
-    .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role when the handpick list is posted? (default: false)'))
+    .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role for the schedule embed and the handpick list? (default: false)'))
     .addStringOption(o => o.setName('slides').setDescription('Link to your slides (shown in the schedule embed)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
     .toJSON(),
@@ -782,6 +782,7 @@ function setupWatcher(client) {
 
     try {
       const ch  = await client.channels.fetch(pending.channelId);
+      if (pending.pingEvent) await ch.send(`<@&${EVENT_PING_ROLE_ID}>`).catch(() => {});
       const msg = await ch.send({ embeds: [watchEmbed] });
       pending.messageId = msg.id;
       // Bot reacts ✅ as a visual cue — bot reactions don't count toward threshold
