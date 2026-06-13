@@ -303,6 +303,10 @@ const CATEGORIES = {
         name: '📦 Extras',
         value: 'Overflow country slots that stay locked until every main country is claimed. The bot then DMs the host to either open them for claiming (announced in the channel) or remove them from the list.',
       },
+      {
+        name: '📝 Logging',
+        value: 'Every moderation and admin action — blacklists, exclusions, awards, results, edits, deletions, and resets — is automatically logged to a dedicated log channel showing who did what.',
+      },
     ],
   },
 
@@ -329,12 +333,35 @@ const CATEGORIES = {
     ],
   },
 
+  logging: {
+    label: '📝 Logging',
+    color: 0x5865f2,
+    fields: [
+      {
+        name: 'Where everything is logged',
+        value: 'Moderation and admin actions are logged automatically to <#1508275128025223238> as embeds showing **who did it, to whom, and why** (where a reason applies). Vote exclusions are additionally logged to **#homage-poll-log**, alongside the bot\'s list expiry and auto-delete announcements.',
+      },
+      {
+        name: '🚫 Moderation actions',
+        value: '• `/blacklist` — player, duration, and reason\n• `/unblacklist` — who lifted it\n• `/exclude_check` — whose vote, how long, and why\n• `/remove_exclusion` — whose exclusion was lifted',
+      },
+      {
+        name: '🏆 Awards & Results',
+        value: '• `/give_mvp` · `/give_hm` — who gave how many to whom, with new totals\n• `/remove_mvp` · `/remove_hm` — same for removals\n• `/post_results` — event name and factions\n• `/edit_result` — which result was edited\n• `/delete_result` · `/reset_results` — deletions with awards revoked',
+      },
+      {
+        name: '🗑️ Edits, deletions & resets',
+        value: '• `/edit_preset` — every change: renames, countries added/removed, factions added/removed\n• `/delete_preset` · `/reset_presets`\n• `/delete_list` · `/reset_list`\n• `/remove_schedule` · `/reset_schedule`\n• `/delete_player` · `/reset_rankings`',
+      },
+    ],
+  },
+
 };
 
 // ─── Section layouts ──────────────────────────────────────────────────────────
 const S1_ROW1 = ['overview', 'creating', 'editing', 'presets', 'watcher'];
 const S1_ROW2 = ['restrictions', 'awards', 'majors', 'teams', 'resets'];
-const S2_KEYS = ['s2overview', 'extras'];
+const S2_KEYS = ['s2overview', 'extras', 'logging'];
 
 // Top-level: two section buttons
 function buildSectionPicker() {
@@ -394,7 +421,7 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
   .setDescription('Choose a section below.')
   .addFields(
     { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Resets' },
-    { name: 'Section 2', value: '⚡ Overview · 📦 Extras' },
+    { name: 'Section 2', value: '⚡ Overview · 📦 Extras · 📝 Logging' },
   )
   .setColor(0x5865f2)
   .setFooter({ text: 'Click a section button to get started · Tip: !guide also opens this' });
