@@ -461,7 +461,11 @@ function setupGuide(client) {
     if (message.author.bot) return;
     if (message.content.trim().toLowerCase() !== '!guide') return;
     try {
-      await message.channel.send({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
+      await message.reply({
+        embeds: [SECTION_PICKER_EMBED],
+        components: buildSectionPicker(),
+        allowedMentions: { repliedUser: false },
+      });
     } catch (e) { console.warn('!guide failed:', e.message); }
   });
 
