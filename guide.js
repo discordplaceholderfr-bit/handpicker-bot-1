@@ -48,8 +48,8 @@ const CATEGORIES = {
         value: 'Automatic Discord role assignment — when a player claims a country they get their faction\'s role, and lose it when they unclaim. Mappings can be automatic or set manually.',
       },
       {
-        name: '🗑️ Resets',
-        value: 'Cleanup commands — delete or wipe lists, presets, leaderboard entries, team mappings, schedules, and results, individually or all at once.',
+        name: '🗑️ Deletions',
+        value: 'Every delete and reset command in one place — wipe lists, presets, leaderboard entries, team mappings, schedules, and results, individually or all at once.',
       },
     ],
   },
@@ -132,10 +132,6 @@ const CATEGORIES = {
         name: '`/list_presets` · `/preview_preset`',
         value: '`/list_presets` — Shows all saved presets with factions, country count, and save date. Includes a dropdown to preview any one inline.\n\n`/preview_preset` — Pick a preset from a dropdown to see all its factions and countries before you commit to loading it.',
       },
-      {
-        name: '`/delete_preset` — Admin',
-        value: 'Permanently delete one saved preset via dropdown. This cannot be undone. Use `/reset_presets` to wipe all presets at once.',
-      },
     ],
   },
 
@@ -170,10 +166,6 @@ const CATEGORIES = {
         name: '`/unblacklist` — Admin',
         value: 'Lift a blacklist early — their votes count and they can claim again immediately. The player is DMed that the blacklist was lifted.\n\n**Example:** `/unblacklist user:@Player`',
       },
-      {
-        name: '`/remove_schedule` — Admin',
-        value: 'Delete a specific schedule via dropdown. Stops it from tracking reactions entirely. The list it may have already posted is unaffected.\n\n**Use case:** An event is cancelled and you no longer need the schedule.',
-      },
     ],
   },
 
@@ -192,10 +184,6 @@ const CATEGORIES = {
       {
         name: '`/rankings`',
         value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player\n\nThe rankings embed auto-updates whenever an MVP or HM is given, removed, or results are posted.',
-      },
-      {
-        name: '`/delete_player` — Host',
-        value: 'Remove a specific player entirely from the leaderboard via dropdown — wipes all their MVPs and HMs in one go.\n\n**Use case:** A player left the server, was added by mistake, or needs a full reset.',
       },
       {
         name: '`/post_results` — Host',
@@ -255,7 +243,7 @@ const CATEGORIES = {
   },
 
   resets: {
-    label: '🗑️ Resets',
+    label: '🗑️ Deletions',
     color: 0xff4444,
     fields: [
       {
@@ -275,8 +263,8 @@ const CATEGORIES = {
         value: 'Remove **all** faction → team role mappings at once. Players who already have team roles keep them — only future claims are affected.',
       },
       {
-        name: '`/reset_schedule` — Admin',
-        value: 'Delete **all** active schedules for this server. Use `/remove_schedule` (in 🚫 Restrictions) to stop just one specific schedule.',
+        name: '`/remove_schedule` · `/reset_schedule` — Admin',
+        value: '`/remove_schedule` — Delete one specific schedule via dropdown. Stops it tracking reactions entirely; any list it already posted is unaffected.\n`/reset_schedule` — Delete **all** active schedules for this server.\n\n**Use case:** An event is cancelled and you no longer need its schedule.',
       },
       {
         name: '`/delete_result` · `/reset_results` — Admin',
@@ -412,7 +400,7 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
   .setTitle('📖 Host Guide')
   .setDescription('Choose a section below.')
   .addFields(
-    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Resets' },
+    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Deletions' },
     { name: 'Section 2', value: '⚡ Overview · 📦 Extras · 📝 Logging' },
   )
   .setColor(0x5865f2)
