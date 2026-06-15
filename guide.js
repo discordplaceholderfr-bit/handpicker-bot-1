@@ -33,7 +33,7 @@ const CATEGORIES = {
       },
       {
         name: '🚫 Restrictions',
-        value: 'Keep the vote count and claims clean — exclude individual votes from a schedule, undo exclusions, and temporarily blacklist players from claiming in any list.',
+        value: 'Keep the vote count and claims clean — blacklist a player to both drop their ✅ votes from every schedule and block them from claiming in any list, then unblacklist to restore them.',
       },
       {
         name: '🏆 Awards',
@@ -163,24 +163,16 @@ const CATEGORIES = {
     color: 0xed4245,
     fields: [
       {
-        name: '`/exclude_check` — Admin',
-        value: 'Exclude a specific player\'s vote from the schedule count. A reason is required. The exclusion is logged automatically to **#homage-poll-log** with the player, reason, and who excluded them.\n\n**Use case:** A player reacted to the schedule but confirmed they can\'t attend — exclude their vote so it doesn\'t push the count toward the threshold.\n\n**How:** `/exclude_check` → pick the player from the list → enter the reason.',
+        name: '`/blacklist` — Admin',
+        value: 'Blacklist a player for a set duration. While blacklisted, **two things happen automatically across the whole server** until they\'re unblacklisted (or the duration expires):\n• Their ✅ reactions **don\'t count** toward any schedule\'s threshold\n• They **can\'t claim** countries in any handpick list\n\nThe player is **DMed** with the reason and exactly when the blacklist expires.\n\n**Options:**\n• `user` — the player to blacklist\n• `duration` — how long: `1d`, `2h 30m`, `30m`, etc.\n• `reason` — shown in the DM and on every failed claim attempt\n\n**Example:** `/blacklist user:@Player duration:2d reason:No-show at scheduled game`',
       },
       {
-        name: '`/remove_exclusion` — Admin',
-        value: 'Undo an exclusion so that player\'s vote counts again toward the threshold.\n\n**Use case:** You excluded someone but they\'ve since confirmed they can attend.',
+        name: '`/unblacklist` — Admin',
+        value: 'Lift a blacklist early — their votes count and they can claim again immediately. The player is DMed that the blacklist was lifted.\n\n**Example:** `/unblacklist user:@Player`',
       },
       {
         name: '`/remove_schedule` — Admin',
         value: 'Delete a specific schedule via dropdown. Stops it from tracking reactions entirely. The list it may have already posted is unaffected.\n\n**Use case:** An event is cancelled and you no longer need the schedule.',
-      },
-      {
-        name: '`/blacklist` — Admin',
-        value: 'Block a player from claiming in **any** handpick list for a set duration. When they try to claim they see the reason and how long remains.\n\n**Options:**\n• `user` — the player to ban\n• `duration` — how long: `1d`, `2h 30m`, `30m`, etc.\n• `reason` — shown to the player on every failed claim attempt\n\nThe ban expires and lifts automatically.\n\n**Example:** `/blacklist user:@Player duration:2d reason:No-show at scheduled game`',
-      },
-      {
-        name: '`/unblacklist` — Admin',
-        value: 'Lift a blacklist early, restoring the player\'s ability to claim immediately.\n\n**Example:** `/unblacklist user:@Player`',
       },
     ],
   },
@@ -305,7 +297,7 @@ const CATEGORIES = {
       },
       {
         name: '📝 Logging',
-        value: 'Every moderation and admin action — blacklists, exclusions, awards, results, edits, deletions, and resets — is automatically logged to a dedicated log channel showing who did what.',
+        value: 'Every moderation and admin action — blacklists, awards, results, edits, deletions, and resets — is automatically logged to a dedicated log channel showing who did what.',
       },
     ],
   },
@@ -339,11 +331,11 @@ const CATEGORIES = {
     fields: [
       {
         name: 'Where everything is logged',
-        value: 'Moderation and admin actions are logged automatically to <#1508275128025223238> as embeds showing **who did it, to whom, and why** (where a reason applies). Vote exclusions are additionally logged to **#homage-poll-log**, alongside the bot\'s list expiry and auto-delete announcements.',
+        value: 'Moderation and admin actions are logged automatically to <#1508275128025223238> as embeds showing **who did it, to whom, and why** (where a reason applies). The bot\'s list expiry and auto-delete announcements still go to **#homage-poll-log**.',
       },
       {
         name: '🚫 Moderation actions',
-        value: '• `/blacklist` — player, duration, and reason\n• `/unblacklist` — who lifted it\n• `/exclude_check` — whose vote, how long, and why\n• `/remove_exclusion` — whose exclusion was lifted',
+        value: '• `/blacklist` — player, duration, and reason\n• `/unblacklist` — who lifted it',
       },
       {
         name: '🏆 Awards & Results',

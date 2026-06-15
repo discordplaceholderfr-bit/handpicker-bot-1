@@ -1,5 +1,6 @@
 const { isAdmin, denyAdmin, isHost, denyHost } = require('./permissions');
 const { auditLog } = require('./auditlog');
+const { isBlacklisted } = require('./blacklist');
 const {
   SlashCommandBuilder,
   EmbedBuilder,
@@ -40,14 +41,6 @@ const activeTimers       = {}; // watcherId → countdown setTimeout handle
 const expiryTimers       = {}; // watcherId → expiry setTimeout handle
 const watcherAutoTimers  = {}; // watcherId → 3-hour auto-reset handle
 const WATCHER_RESET_MS   = 3 * 60 * 60 * 1000;
-
-function parseDuration(str) {
-  let ms = 0;
-  const d = str.match(/(\d+)\s*d/i); if (d) ms += parseInt(d[1]) * 86400000;
-  const h = str.match(/(\d+)\s*h/i); if (h) ms += parseInt(h[1]) * 3600000;
-  const m = str.match(/(\d+)\s*m/i); if (m) ms += parseInt(m[1]) * 60000;
-  return ms;
-}
 
 // Parse a minute/second delay like "1m 30s", "45s", "2m", "0s".
 // A bare number is treated as minutes (e.g. "5" → 5 minutes) for friendliness.
@@ -115,12 +108,10 @@ function parseMessageLink(link) {
   return { guildId: match[1], channelId: match[2], messageId: match[3] };
 }
 
-// ── Count valid votes / reactions (minus exclusions) ─────────────────────────
+// ── Count valid votes / reactions (blacklisted users don't count) ────────────
+// A user's ✅ vote is excluded for as long as they are blacklisted in the guild.
 function isExcluded(watcher, userId) {
-  const excl = (watcher.exclusions || {})[userId];
-  if (!excl) return false;
-  if (excl.expiresAt && Date.now() > excl.expiresAt) return false; // expired
-  return true;
+  return isBlacklisted(watcher.guildId, userId);
 }
 
 async function getEffectiveCount(client, watcherId) {
@@ -156,40 +147,13 @@ async function getEffectiveCount(client, watcherId) {
         const voters = await bestAnswer.fetchVoters();
         return voters.filter(u => !u.bot && !isExcluded(watcher, u.id)).size;
       } catch {
-        const activeExcl = Object.values(watcher.exclusions || {}).filter(e => !e.expiresAt || Date.now() <= e.expiresAt).length;
-        return Math.max(0, (bestAnswer.voteCount || 0) - activeExcl);
+        return Math.max(0, bestAnswer.voteCount || 0);
       }
     }
   } catch (e) {
     console.warn(`getEffectiveCount(${watcherId}):`, e.message);
   }
   return 0;
-}
-
-// ── Log exclusions to #homage-poll-log ───────────────────────────────────────
-async function logExclusion(guild, watcher, watcherId, targetUser, reason, excludedBy) {
-  try {
-    const logCh = guild.channels.cache.get(POLL_LOG_CHANNEL_ID)
-      ?? await guild.channels.fetch(POLL_LOG_CHANNEL_ID).catch(() => null);
-    if (!logCh) return;
-    await logCh.send({
-      embeds: [new EmbedBuilder()
-        .setTitle('🚫 Vote Excluded')
-        .setColor(0xff9900)
-        .addFields(
-          { name: '👤 Excluded User', value: `<@${targetUser.id}> (${targetUser.tag ?? targetUser.id})`, inline: true },
-          { name: '🛡️ By',           value: `<@${excludedBy.id}>`,                                       inline: true },
-          { name: '📋 Reason',        value: reason },
-          { name: '🔗 Message',       value: `[Jump](https://discord.com/channels/${watcher.guildId}/${watcher.channelId}/${watcher.messageId})`, inline: true },
-          { name: '🆔 Schedule',       value: `#${watcherId.slice(-6)}`,                                  inline: true },
-          { name: '📋 Preset',        value: watcher.presetName,                                          inline: true },
-        )
-        .setTimestamp()
-      ],
-    });
-  } catch (e) {
-    console.warn('logExclusion error:', e.message);
-  }
 }
 
 // ── Fire when threshold is first reached ─────────────────────────────────────
@@ -429,14 +393,6 @@ const watcherCommands = [
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName('exclude_check')
-    .setDescription('Admin: Exclude a user\'s vote from a schedule\'s count (logged to #homage-poll-log)')
-    .addUserOption(o => o.setName('user').setDescription('User whose vote to exclude').setRequired(true))
-    .addStringOption(o => o.setName('reason').setDescription('Reason for exclusion').setRequired(true))
-    .addStringOption(o => o.setName('duration').setDescription('How long to exclude e.g. 1d 2h 30m (default: 30m)').setRequired(true))
-    .toJSON(),
-
-  new SlashCommandBuilder()
     .setName('list_schedules')
     .setDescription('Show all active schedules in this server')
     .toJSON(),
@@ -450,11 +406,6 @@ const watcherCommands = [
     .setName('delay_schedule')
     .setDescription('Admin: Add extra minutes to an active schedule countdown or deadline')
     .addIntegerOption(o => o.setName('minutes').setDescription('Minutes to add').setRequired(true).setMinValue(1))
-    .toJSON(),
-
-  new SlashCommandBuilder()
-    .setName('remove_exclusion')
-    .setDescription('Admin: Remove an exclusion from a schedule so that vote counts again')
     .toJSON(),
 
   new SlashCommandBuilder()
@@ -547,7 +498,6 @@ function setupWatcher(client) {
         delayMs,
         postChannelId: postChannel?.id ?? interaction.channelId,
         hostId:        interaction.user.id,
-        exclusions:    {},
         triggered:     false,
         triggeredAt:   null,
         posted:        false,
@@ -582,44 +532,6 @@ function setupWatcher(client) {
       });
     }
 
-    // ── /exclude_check ──────────────────────────────────────────────────────
-    if (commandName === 'exclude_check') {
-      if (!isAdmin(interaction.member)) return denyAdmin(interaction);
-      const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w.posted && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.', ephemeral: true });
-
-      const targetUser    = interaction.options.getUser('user');
-      const reason        = interaction.options.getString('reason');
-      const durationStr   = interaction.options.getString('duration') ?? '30m';
-      const durationMs    = parseDuration(durationStr) || 30 * 60 * 1000;
-      const exclExpiresAt = Date.now() + durationMs;
-
-      // Apply to ALL active watchers in the server
-      for (const [watcherId, watcher] of guildWatchers) {
-        if (!watcher.exclusions) watcher.exclusions = {};
-        watcher.exclusions[targetUser.id] = { reason, excludedBy: interaction.user.id, timestamp: Date.now(), expiresAt: exclExpiresAt };
-        if (guild) await logExclusion(guild, watcher, watcherId, targetUser, reason, interaction.user);
-        const countAfter = await getEffectiveCount(client, watcherId);
-        if (countAfter < watcher.threshold) await resetWatcher(client, watcherId);
-      }
-      saveWatchers(watchers);
-      auditLog('🚫 Vote Excluded', `<@${interaction.user.id}> excluded <@${targetUser.id}>'s vote from **${guildWatchers.length}** schedule(s) for **${durationStr}**.\n**Reason:** ${reason}`, 0xff9900);
-      return interaction.reply({
-        embeds: [new EmbedBuilder()
-          .setTitle('🚫 Vote Excluded')
-          .setColor(0xff9900)
-          .addFields(
-            { name: '👤 User',     value: `<@${targetUser.id}>`,                         inline: true },
-            { name: '⏰ Expires',  value: `<t:${Math.floor(exclExpiresAt/1000)}:R>`,     inline: true },
-            { name: '📋 Reason',   value: reason },
-            { name: '📋 Schedules', value: `Applied to all **${guildWatchers.length}** active schedule(s)` },
-          )
-          .setFooter({ text: 'Logged to #homage-poll-log' })
-          .setTimestamp()
-        ],
-      });
-    }
-
     // ── /list_watchers ──────────────────────────────────────────────────────
     if (commandName === 'list_schedules') {
       if (!isHost(interaction.member)) return denyHost(interaction);
@@ -628,59 +540,14 @@ function setupWatcher(client) {
       let desc = '';
       for (const [watcherId, w] of guildWatchers) {
         const status    = w.posted ? '✅ Posted' : w.triggered ? `⏳ Waiting ${formatDelay(getDelayMs(w))}...` : '👀 Watching';
-        const exclCount = Object.keys(w.exclusions || {}).length;
         desc += `**#${watcherId.slice(-6)}** — ${status}\n`;
         desc += `Preset: **"${w.presetName}"** · Threshold: **${w.threshold} ✅**\n`;
         desc += `Delay: **${formatDelay(getDelayMs(w))}** · Posts to: <#${w.postChannelId}>\n`;
-        if (exclCount > 0) desc += `Exclusions: **${exclCount}**\n`;
         desc += '\n';
       }
       return interaction.reply({
         embeds: [new EmbedBuilder().setTitle('📅 Active Schedules').setDescription(desc.trim()).setColor(0x5865f2)],
       });
-    }
-
-    // ── /remove_exclusion ───────────────────────────────────────────────────
-    if (commandName === 'remove_exclusion') {
-      if (!isAdmin(interaction.member)) return denyAdmin(interaction); // vote exclusion — admin only
-      const guildWatchers = Object.entries(watchers).filter(([, w]) => w.guildId === guildId && !w._pending);
-      if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.', ephemeral: true });
-
-      // Find all watchers that have at least one exclusion
-      const watchersWithExcl = guildWatchers.filter(([, w]) => Object.keys(w.exclusions || {}).length > 0);
-      if (watchersWithExcl.length === 0) return interaction.reply({ content: '❌ No exclusions to remove.', ephemeral: true });
-
-      if (watchersWithExcl.length === 1) {
-        // Skip to exclusion picker directly
-        const [watcherId, watcher] = watchersWithExcl[0];
-        const excEntries = Object.entries(watcher.exclusions || {});
-        const opts = excEntries.map(([userId, data]) => ({
-          label:       `User ${userId}`.slice(0, 100),
-          description: `Reason: ${data.reason}`.slice(0, 100),
-          value:       `${watcherId}|||${userId}`,
-        }));
-        const row = new ActionRowBuilder().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(`remove_excl_pick__${interaction.user.id}`)
-            .setPlaceholder('Choose an exclusion to remove...')
-            .addOptions(opts)
-        );
-        return interaction.reply({ content: `🗑️ **"${watcher.presetName}"** — which exclusion do you want to remove?`, components: [row] });
-      }
-
-      // Multiple watchers with exclusions → pick watcher first
-      const opts = watchersWithExcl.map(([watcherId, w]) => ({
-        label:       `#${watcherId.slice(-6)} — ${w.presetName}`.slice(0, 100),
-        description: `${Object.keys(w.exclusions || {}).length} exclusion(s)`.slice(0, 100),
-        value:       watcherId,
-      }));
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId(`remove_excl_watcher__${interaction.user.id}`)
-          .setPlaceholder('Choose a schedule...')
-          .addOptions(opts)
-      );
-      return interaction.reply({ content: '🗑️ Which schedule do you want to remove an exclusion from?', components: [row] });
     }
 
     // ── /reset_watcher ──────────────────────────────────────────────────────
@@ -965,54 +832,6 @@ function setupWatcher(client) {
     saveWatchers(watchers);
     auditLog('🗑️ Schedule Removed', `<@${interaction.user.id}> removed the schedule for **"${name}"**.`, 0xff4444);
     return interaction.update({ content: `✅ Watcher for **"${name}"** removed.`, components: [] });
-  });
-
-  // ── Dropdown: remove_excl_watcher (step 1: pick watcher) ──────────────────
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (!interaction.customId.startsWith('remove_excl_watcher__')) return;
-    const userId = interaction.customId.split('__')[1];
-    if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });
-    const watcherId = interaction.values[0];
-    const watcher   = watchers[watcherId];
-    if (!watcher) return interaction.update({ content: '❌ Watcher no longer exists.', components: [] });
-    const excEntries = Object.entries(watcher.exclusions || {});
-    if (excEntries.length === 0) return interaction.update({ content: '❌ No exclusions on this watcher.', components: [] });
-    const opts = excEntries.map(([uid, data]) => ({
-      label:       `User ${uid}`.slice(0, 100),
-      description: `Reason: ${data.reason}`.slice(0, 100),
-      value:       `${watcherId}|||${uid}`,
-    }));
-    const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId(`remove_excl_pick__${userId}`)
-        .setPlaceholder('Choose an exclusion to remove...')
-        .addOptions(opts)
-    );
-    return interaction.update({ content: `🗑️ **"${watcher.presetName}"** — which exclusion do you want to remove?`, components: [row] });
-  });
-
-  // ── Dropdown: remove_excl_pick (step 2: pick exclusion) ───────────────────
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (!interaction.customId.startsWith('remove_excl_pick__')) return;
-    const userId = interaction.customId.split('__')[1];
-    if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });
-    const [watcherId, targetUserId] = interaction.values[0].split('|||');
-    const watcher = watchers[watcherId];
-    if (!watcher) return interaction.update({ content: '❌ Watcher no longer exists.', components: [] });
-    const excData = (watcher.exclusions || {})[targetUserId];
-    if (!excData) return interaction.update({ content: '❌ That exclusion no longer exists.', components: [] });
-    delete watcher.exclusions[targetUserId];
-    saveWatchers(watchers);
-    auditLog('✅ Exclusion Removed', `<@${interaction.user.id}> removed the vote exclusion for <@${targetUserId}> on **"${watcher.presetName}"**.`, 0x57f287);
-    // Re-check threshold now that the vote is restored
-    const count = await getEffectiveCount(client, watcherId);
-    if (count >= watcher.threshold && !watcher.triggered) await triggerWatcher(client, watcherId);
-    return interaction.update({
-      content: `✅ Exclusion for <@${targetUserId}> removed from **"${watcher.presetName}"**. Their vote counts again.\n*Reason was: ${excData.reason}*`,
-      components: [],
-    });
   });
 
   // ── Dropdown: delay_watcher_pick ───────────────────────────────────────────

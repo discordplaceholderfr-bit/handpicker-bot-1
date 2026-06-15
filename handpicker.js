@@ -1,5 +1,6 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { auditLog } = require('./auditlog');
+const { getBlacklist, addBlacklist, removeBlacklist } = require('./blacklist');
 
 const {
   ActionRowBuilder,
@@ -21,7 +22,6 @@ const path = require('path');
 const DATA_DIR      = process.env.DATA_DIR || path.join(__dirname, 'data');
 const GAMES_FILE    = path.join(DATA_DIR, 'games.json');
 const ROLES_FILE    = path.join(DATA_DIR, 'roles.json');
-const BLACKLIST_FILE = path.join(DATA_DIR, 'blacklist.json');
 
 function load(file) {
   try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}; }
@@ -34,7 +34,6 @@ function save(file, data) {
 
 let games      = load(GAMES_FILE);
 let majorRoles = load(ROLES_FILE);
-let blacklist  = load(BLACKLIST_FILE);
 
 // Parse "1d 2h 30m" → milliseconds
 function parseDuration(str) {
@@ -529,11 +528,8 @@ function setupHandpicker(client) {
       const userId  = interaction.user.id;
 
       // Blacklist check
-      const bl = blacklist[guildId]?.[userId];
-      if (bl) {
-        if (Date.now() > bl.expiresAt) { delete blacklist[guildId][userId]; save(BLACKLIST_FILE, blacklist); }
-        else return interaction.reply({ content: `❌ You are blacklisted from claiming until <t:${Math.floor(bl.expiresAt/1000)}:R>.\nReason: ${bl.reason}`, ephemeral: true });
-      }
+      const bl = getBlacklist(guildId, userId);
+      if (bl) return interaction.reply({ content: `❌ You are blacklisted from claiming until <t:${Math.floor(bl.expiresAt/1000)}:R>.\nReason: ${bl.reason}`, ephemeral: true });
 
       for (const [fn, f] of Object.entries(game.factions)) {
         for (const [c, uid] of Object.entries(f.claims)) {
@@ -622,11 +618,24 @@ function setupHandpicker(client) {
       const reason      = interaction.options.getString('reason');
       const ms          = parseDuration(durationStr);
       if (ms <= 0) return interaction.reply({ content: '❌ Invalid duration. Use format like `1d`, `2h`, `30m`, or combined `1d 2h 30m`.', ephemeral: true });
-      if (!blacklist[guildId]) blacklist[guildId] = {};
       const expiresAt = Date.now() + ms;
-      blacklist[guildId][target.id] = { reason, bannedBy: interaction.user.id, expiresAt };
-      save(BLACKLIST_FILE, blacklist);
+      addBlacklist(guildId, target.id, { reason, bannedBy: interaction.user.id, expiresAt });
       auditLog('🚫 Player Blacklisted', `<@${interaction.user.id}> blacklisted <@${target.id}> for **${durationStr}**.\n**Reason:** ${reason}`, 0xff4444);
+
+      // DM the blacklisted user with the reason and when it expires
+      try {
+        const u = await client.users.fetch(target.id);
+        await u.send({ embeds: [new EmbedBuilder()
+          .setTitle('🚫 You have been blacklisted')
+          .setDescription(`You have been blacklisted in **${interaction.guild?.name ?? 'the server'}**. While blacklisted, your ✅ votes don't count toward schedules and you can't claim countries in any handpick list.`)
+          .addFields(
+            { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt/1000)}:F> (<t:${Math.floor(expiresAt/1000)}:R>)` },
+            { name: '📋 Reason',  value: reason },
+          )
+          .setColor(0xff4444).setTimestamp()
+        ]});
+      } catch { /* DMs closed */ }
+
       return interaction.reply({ embeds: [new EmbedBuilder()
         .setTitle('🚫 Player Blacklisted')
         .setColor(0xff4444)
@@ -641,10 +650,19 @@ function setupHandpicker(client) {
     if (commandName === 'unblacklist') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const target = interaction.options.getUser('user');
-      if (!blacklist[guildId]?.[target.id]) return interaction.reply({ content: `❌ <@${target.id}> is not blacklisted.`, ephemeral: true });
-      delete blacklist[guildId][target.id];
-      save(BLACKLIST_FILE, blacklist);
+      if (!removeBlacklist(guildId, target.id)) return interaction.reply({ content: `❌ <@${target.id}> is not blacklisted.`, ephemeral: true });
       auditLog('✅ Player Unblacklisted', `<@${interaction.user.id}> removed <@${target.id}> from the blacklist.`, 0x57f287);
+
+      // DM the user that they've been unblacklisted
+      try {
+        const u = await client.users.fetch(target.id);
+        await u.send({ embeds: [new EmbedBuilder()
+          .setTitle('✅ You have been unblacklisted')
+          .setDescription(`Your blacklist in **${interaction.guild?.name ?? 'the server'}** has been lifted. You can vote and claim countries again.`)
+          .setColor(0x57f287).setTimestamp()
+        ]});
+      } catch { /* DMs closed */ }
+
       return interaction.reply({ content: `✅ <@${target.id}> has been removed from the blacklist.` });
     }
 
@@ -851,6 +869,9 @@ function setupHandpicker(client) {
     const faction = game.factions[factionName];
     const country = interaction.values[0];
     const userId  = interaction.user.id;
+    // Blacklist check
+    const bl = getBlacklist(guildId, userId);
+    if (bl) return interaction.reply({ content: `❌ You are blacklisted from claiming until <t:${Math.floor(bl.expiresAt/1000)}:R>.\nReason: ${bl.reason}`, ephemeral: true });
     for (const [fn, f] of Object.entries(game.factions)) {
       for (const [c, uid] of Object.entries(f.claims)) {
         if (uid === userId) return interaction.reply({ content: `❌ You already claimed **${c}** (${fn}). Use the **Unclaim** button first.`, ephemeral: true });
