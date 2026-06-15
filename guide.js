@@ -21,7 +21,7 @@ const CATEGORIES = {
       },
       {
         name: '✏️ Editing',
-        value: 'Change a live list without recreating it — remove a player\'s claim, drop a country or a whole faction, or let two players swap countries with mutual confirmation.',
+        value: 'Change a live list without recreating it — drop a country or a whole faction, edit a saved preset, or delay a schedule.',
       },
       {
         name: '💾 Presets',
@@ -40,8 +40,8 @@ const CATEGORIES = {
         value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, and post event results that log awards automatically.',
       },
       {
-        name: '⭐ Majors',
-        value: 'Lock important countries behind approved roles. Countries marked as Major can only be claimed by players holding one of the roles you approve.',
+        name: '👥 Players',
+        value: 'Everything that affects players — how they claim and unclaim, swapping countries, removing or pre-assigning players, and Major countries locked behind approved roles.',
       },
       {
         name: '🎖️ Teams',
@@ -74,10 +74,6 @@ const CATEGORIES = {
         name: '`/add_faction` — Host',
         value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:*USSR, China, Mongolia`\n\nPrefix any country with `*` to mark it as Major — it shows as 🔸 in the embed and requires an approved Major role to claim.\nAdd `(Extra)` to a country name (e.g. `Spain (Extra)`) to make it an overflow slot — locked until all main countries are claimed and you open extras.',
       },
-      {
-        name: '`/add_preset_players` — Host',
-        value: 'Bulk pre-assign players to countries using a text popup. One entry per line — paste the country name, a colon, then the player\'s Discord User ID (right-click their name → Copy ID).\n\n**Format:**\n```\nGermany: 123456789012345678\nFrance: 987654321098765432\nRussia: 111222333444555666\n```\nWorks before the list posts (during setup) and on live lists. If a country is already claimed it overwrites the old claim.',
-      },
     ],
   },
 
@@ -87,19 +83,11 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/remove_faction` — Admin',
-        value: 'Remove an entire faction and all its countries from an active list via dropdown. If multiple lists are active it asks which list first. The embed updates automatically.\n\n**Use case:** A faction becomes unplayable mid-setup and needs to be pulled entirely before anyone claims.',
+        value: 'Remove an entire faction and all its countries from an active list via dropdown. If multiple lists are active it asks which list first. The embed updates automatically.',
       },
       {
         name: '`/remove_nation` — Admin',
-        value: 'Remove a single country from a list. The embed updates automatically and the slot disappears — it can no longer be claimed. If the country was already claimed, that claim is wiped too.\n\n**Use case:** A specific country gets dropped last-minute (e.g. removing Finland from a faction right before the game).',
-      },
-      {
-        name: '`/remove_player` — Admin',
-        value: 'Remove a player\'s claim from the most recent list. Two ways:\n\n**Tag directly (fastest):**\n`/remove_player user:@Player` — the bot finds their claim and removes it in one step, then strips their team role.\n\n**No user specified:**\nShows a dropdown of every claimed country — pick whichever one you want to clear.\n\nEither way the slot returns to unclaimed on the embed.',
-      },
-      {
-        name: '`/swap` — Anyone',
-        value: 'Request a country swap with another player who already has a claim. The bot posts an embed tagging both players with **Accept** and **Cancel** buttons. **Both must click Accept within 2 minutes** for the swap to execute. Either side can cancel at any time.\n\n**Example:** `/swap player:@OtherPlayer`\n\nTeam roles are swapped automatically alongside the countries.',
+        value: 'Remove a single country from a list. The embed updates automatically and the slot disappears — it can no longer be claimed. If the country was already claimed, that claim is wiped too.',
       },
       {
         name: '`/edit_preset` — Host',
@@ -200,12 +188,28 @@ const CATEGORIES = {
     ],
   },
 
-  majors: {
-    label: '⭐ Majors',
+  players: {
+    label: '👥 Players',
     color: 0xff9900,
     fields: [
       {
-        name: 'How Major countries work',
+        name: 'Claiming a country',
+        value: 'Players claim through the posted list embed — pick a country from a faction\'s **dropdown**, and press the red **Unclaim** button to drop it. You can also use the `/claim country:<name>` command. Each player can hold one country at a time, and Major (`*`) and locked Extra slots are enforced on every claim.',
+      },
+      {
+        name: '`/swap` — Anyone',
+        value: 'Request a country swap with another player who already has a claim. The bot posts an embed tagging both players with **Accept** and **Cancel** buttons. **Both must click Accept within 2 minutes** for the swap to execute. Either side can cancel at any time.\n\n**Example:** `/swap player:@OtherPlayer`\n\nTeam roles are swapped automatically alongside the countries.',
+      },
+      {
+        name: '`/remove_player` — Admin',
+        value: 'Remove a player\'s claim from the most recent list. Two ways:\n\n**Tag directly (fastest):**\n`/remove_player user:@Player` — the bot finds their claim and removes it in one step, then strips their team role.\n\n**No user specified:**\nShows a dropdown of every claimed country — pick whichever one you want to clear.\n\nEither way the slot returns to unclaimed on the embed.',
+      },
+      {
+        name: '`/add_preset_players` — Host',
+        value: 'Bulk pre-assign players to countries using a text popup. One entry per line — paste the country name, a colon, then the player\'s Discord User ID (right-click their name → Copy ID).\n\n**Format:**\n```\nGermany: 123456789012345678\nFrance: 987654321098765432\nRussia: 111222333444555666\n```\nWorks before the list posts (during setup) and on live lists. If a country is already claimed it overwrites the old claim.',
+      },
+      {
+        name: '⭐ How Major countries work',
         value: 'Any country whose name starts with `*` is treated as a **Major** country. Major countries are locked behind approved roles — players without one get blocked when they try to claim.\n\n**Example list entry:** `*Prussia`, `*Austria`, `*France`\n\nMajor countries display with a 🔸 in the embed and dropdown so players know at a glance which countries require a Major role.',
       },
       {
@@ -340,7 +344,7 @@ const CATEGORIES = {
 
 // ─── Section layouts ──────────────────────────────────────────────────────────
 const S1_ROW1 = ['overview', 'creating', 'editing', 'presets', 'watcher'];
-const S1_ROW2 = ['restrictions', 'awards', 'majors', 'teams', 'resets'];
+const S1_ROW2 = ['restrictions', 'awards', 'players', 'teams', 'resets'];
 const S2_KEYS = ['s2overview', 'extras', 'logging'];
 
 // Top-level: two section buttons
@@ -400,7 +404,7 @@ const SECTION_PICKER_EMBED = new EmbedBuilder()
   .setTitle('📖 Host Guide')
   .setDescription('Choose a section below.')
   .addFields(
-    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · ⭐ Majors · 🎖️ Teams · 🗑️ Deletions' },
+    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · 👥 Players · 🎖️ Teams · 🗑️ Deletions' },
     { name: 'Section 2', value: '⚡ Overview · 📦 Extras · 📝 Logging' },
   )
   .setColor(0x5865f2)
