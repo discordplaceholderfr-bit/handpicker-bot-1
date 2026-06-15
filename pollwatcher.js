@@ -777,7 +777,6 @@ function setupWatcher(client) {
         { name: '⏰ Deadline',       value: expiryText,                                                            inline: true },
         { name: '🔒 List Closes In', value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,      inline: true },
         { name: '👥 Preset Players', value: playerCount > 0 ? `${playerCount} pre-assigned` : 'None',             inline: true },
-        ...(pending.slidesLink ? [{ name: '📎 Slides', value: pending.slidesLink, inline: false }] : []),
       )
       .setFooter({ text: `ID: #${watcherId.slice(-6)} · Exclusion logs → #homage-poll-log · React ✅ to vote` })
       .setTimestamp();
@@ -785,7 +784,10 @@ function setupWatcher(client) {
     try {
       const ch  = await client.channels.fetch(pending.channelId);
       if (pending.pingEvent) await ch.send(`<@&${EVENT_PING_ROLE_ID}>`).catch(() => {});
-      const msg = await ch.send({ embeds: [watchEmbed] });
+      // Putting the slides URL in the message content makes Discord auto-load
+      // its link preview card (this never happens for links inside an embed).
+      const content = pending.slidesLink ? `📎 **Slides:** ${pending.slidesLink}` : undefined;
+      const msg = await ch.send({ content, embeds: [watchEmbed] });
       pending.messageId = msg.id;
       // Bot reacts ✅ as a visual cue — bot reactions don't count toward threshold
       await msg.react('✅');
