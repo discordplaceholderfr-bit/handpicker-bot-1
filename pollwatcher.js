@@ -49,6 +49,39 @@ function parseDuration(str) {
   return ms;
 }
 
+// Parse a minute/second delay like "1m 30s", "45s", "2m", "0s".
+// A bare number is treated as minutes (e.g. "5" → 5 minutes) for friendliness.
+// Returns milliseconds, or null if nothing parseable was found.
+function parseMinSec(str) {
+  if (str == null) return null;
+  let ms = 0, matched = false;
+  const m = str.match(/(\d+)\s*m/i); if (m) { ms += parseInt(m[1]) * 60000; matched = true; }
+  const s = str.match(/(\d+)\s*s/i); if (s) { ms += parseInt(s[1]) * 1000;  matched = true; }
+  if (!matched) {
+    const n = str.match(/^\s*(\d+)\s*$/);
+    if (n) { ms = parseInt(n[1]) * 60000; matched = true; }
+  }
+  return matched ? ms : null;
+}
+
+// Format a delay in ms back to a "1m 30s" style string.
+function formatDelay(ms) {
+  if (ms <= 0) return 'instant';
+  const totalSec = Math.round(ms / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  const parts = [];
+  if (mins) parts.push(`${mins}m`);
+  if (secs) parts.push(`${secs}s`);
+  return parts.join(' ');
+}
+
+// Get a watcher's post delay in ms (back-compat: old watchers stored delayMinutes).
+function getDelayMs(w) {
+  if (typeof w.delayMs === 'number') return w.delayMs;
+  return (w.delayMinutes ?? 5) * 60 * 1000;
+}
+
 function scheduleWatcherAutoReset(client, watcherId) {
   if (watcherAutoTimers[watcherId]) clearTimeout(watcherAutoTimers[watcherId]);
   const watcher = watchers[watcherId];
@@ -167,8 +200,8 @@ async function triggerWatcher(client, watcherId) {
   watcher.triggeredAt = Date.now();
   saveWatchers(watchers);
 
-  const delayMs   = (watcher.delayMinutes ?? 5) * 60 * 1000;
-  const delayText = watcher.delayMinutes === 0 ? 'right now' : `in **${watcher.delayMinutes} minute(s)**`;
+  const delayMs   = getDelayMs(watcher);
+  const delayText = delayMs <= 0 ? 'right now' : `in **${formatDelay(delayMs)}**`;
 
   // Announce in the watched channel and save the message ID so it can be deleted on reset
   try {
@@ -386,7 +419,7 @@ const watcherCommands = [
     .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
     .addStringOption(o => o.setName('title').setDescription('Name/title of the event').setRequired(true))
     .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
-    .addIntegerOption(o => o.setName('delay').setDescription('Minutes to wait after threshold before posting the list (default: 5)').setMinValue(0))
+    .addStringOption(o => o.setName('delay').setDescription('Wait after threshold before posting: e.g. 1m 30s, 45s, 0s for instant (default: 5m)'))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
     .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
@@ -439,7 +472,7 @@ function setupWatcher(client) {
   for (const [watcherId, watcher] of Object.entries(watchers)) {
     if (!watcher.createdAt) watcher.createdAt = Date.now();
     if (watcher.triggered && !watcher.posted && watcher.triggeredAt) {
-      const delayMs   = (watcher.delayMinutes ?? 5) * 60 * 1000;
+      const delayMs   = getDelayMs(watcher);
       const elapsed   = Date.now() - watcher.triggeredAt;
       const remaining = Math.max(0, delayMs - elapsed);
       activeTimers[watcherId] = setTimeout(() => postHandpickList(client, watcherId), remaining);
@@ -463,7 +496,14 @@ function setupWatcher(client) {
 
       const eventTitle   = interaction.options.getString('title');
       const threshold    = interaction.options.getInteger('threshold')    ?? 13;
-      const delayMinutes = interaction.options.getInteger('delay')        ?? 5;
+      const delayRaw     = interaction.options.getString('delay');
+      let   delayMs;
+      if (delayRaw == null) {
+        delayMs = 5 * 60 * 1000; // default 5m
+      } else {
+        delayMs = parseMinSec(delayRaw);
+        if (delayMs === null) return interaction.reply({ content: '❌ Invalid delay format. Use like `1m 30s`, `45s`, or `0s` for instant.', ephemeral: true });
+      }
       const postChannel  = interaction.options.getChannel('post_channel');
       const expireIn     = interaction.options.getInteger('expire_in')    ?? 30;
       const expiresAt    = Date.now() + expireIn * 60 * 1000;
@@ -502,7 +542,7 @@ function setupWatcher(client) {
         type:          'reaction',
         emoji:         '✅',
         threshold,
-        delayMinutes,
+        delayMs,
         postChannelId: postChannel?.id ?? interaction.channelId,
         hostId:        interaction.user.id,
         exclusions:    {},
@@ -585,11 +625,11 @@ function setupWatcher(client) {
       if (guildWatchers.length === 0) return interaction.reply({ content: '❌ No active schedules in this server.' });
       let desc = '';
       for (const [watcherId, w] of guildWatchers) {
-        const status    = w.posted ? '✅ Posted' : w.triggered ? `⏳ Waiting ${w.delayMinutes}m...` : '👀 Watching';
+        const status    = w.posted ? '✅ Posted' : w.triggered ? `⏳ Waiting ${formatDelay(getDelayMs(w))}...` : '👀 Watching';
         const exclCount = Object.keys(w.exclusions || {}).length;
         desc += `**#${watcherId.slice(-6)}** — ${status}\n`;
         desc += `Preset: **"${w.presetName}"** · Threshold: **${w.threshold} ✅**\n`;
-        desc += `Delay: **${w.delayMinutes}m** · Posts to: <#${w.postChannelId}>\n`;
+        desc += `Delay: **${formatDelay(getDelayMs(w))}** · Posts to: <#${w.postChannelId}>\n`;
         if (exclCount > 0) desc += `Exclusions: **${exclCount}**\n`;
         desc += '\n';
       }
@@ -672,7 +712,7 @@ function setupWatcher(client) {
         if (watcher.triggered && activeTimers[watcherId]) {
           clearTimeout(activeTimers[watcherId]);
           const elapsed   = Date.now() - watcher.triggeredAt;
-          const baseDelta = (watcher.delayMinutes ?? 5) * 60 * 1000;
+          const baseDelta = getDelayMs(watcher);
           const remaining = Math.max(0, baseDelta - elapsed) + addMs;
           activeTimers[watcherId] = setTimeout(() => postHandpickList(client, watcherId), remaining);
           watcher.triggeredAt = Date.now() - baseDelta + remaining; // adjust so restart recovery works
@@ -772,7 +812,7 @@ function setupWatcher(client) {
       .addFields(
         { name: '📋 Preset',         value: `"${pending.presetName}"`,                                             inline: true },
         { name: '🎯 Threshold',      value: `${pending.threshold} ✅ reactions`,                                  inline: true },
-        { name: '⏱️ Delay',          value: `${pending.delayMinutes} minute(s) after threshold`,                  inline: true },
+        { name: '⏱️ Delay',          value: getDelayMs(pending) <= 0 ? 'Instant (posts immediately)' : `${formatDelay(getDelayMs(pending))} after threshold`, inline: true },
         { name: '📋 Posts to',       value: `<#${pending.postChannelId}>`,                                        inline: true },
         { name: '⏰ Deadline',       value: expiryText,                                                            inline: true },
         { name: '🔒 List Closes In', value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,      inline: true },
@@ -987,7 +1027,7 @@ function setupWatcher(client) {
     if (watcher.triggered && activeTimers[watcherId]) {
       clearTimeout(activeTimers[watcherId]);
       const elapsed   = Date.now() - watcher.triggeredAt;
-      const baseDelta = (watcher.delayMinutes ?? 5) * 60 * 1000;
+      const baseDelta = getDelayMs(watcher);
       const remaining = Math.max(0, baseDelta - elapsed) + addMs;
       activeTimers[watcherId] = setTimeout(() => postHandpickList(client, watcherId), remaining);
       watcher.triggeredAt = Date.now() - baseDelta + remaining;
