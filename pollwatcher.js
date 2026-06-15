@@ -418,13 +418,13 @@ const watcherCommands = [
     .setName('setup_schedule')
     .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
     .addStringOption(o => o.setName('title').setDescription('Name/title of the event').setRequired(true))
-    .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
+    .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger').setMinValue(1).setRequired(true))
+    .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role for the schedule embed and the handpick list?').setRequired(true))
+    .addStringOption(o => o.setName('slides').setDescription('Link to your slides — type "noslides" to hide the slides preview').setRequired(true))
     .addStringOption(o => o.setName('delay').setDescription('Wait after threshold before posting: e.g. 1m 30s, 45s, 0s for instant (default: 30s)'))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
     .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
-    .addBooleanOption(o => o.setName('ping_event').setDescription('Ping Event Ping role for the schedule embed and the handpick list? (default: false)'))
-    .addStringOption(o => o.setName('slides').setDescription('Link to your slides (shown in the schedule embed)'))
     .addStringOption(o => o.setName('preset_players').setDescription('Pre-assign players: Nation: UserID; Nation: UserID (leave empty for none)'))
     .toJSON(),
 
@@ -509,7 +509,9 @@ function setupWatcher(client) {
       const expiresAt    = Date.now() + expireIn * 60 * 1000;
       const listExpiryMin    = interaction.options.getInteger('list_expiry')   ?? 15;
       const pingEvent        = interaction.options.getBoolean('ping_event')    ?? false;
-      const slidesLink       = interaction.options.getString('slides')         ?? null;
+      const slidesRaw        = interaction.options.getString('slides')         ?? '';
+      // "noslides" (any casing) hides the slides preview entirely
+      const slidesLink       = /^\s*noslides\s*$/i.test(slidesRaw) ? null : (slidesRaw.trim() || null);
       const presetPlayersRaw = interaction.options.getString('preset_players') ?? '';
 
       // Parse "Nation: UserID; Nation: UserID" into an object
