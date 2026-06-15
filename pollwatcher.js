@@ -419,7 +419,7 @@ const watcherCommands = [
     .setDescription('Host: Post a reaction embed — react ✅ to vote, fires a handpick list when threshold is reached')
     .addStringOption(o => o.setName('title').setDescription('Name/title of the event').setRequired(true))
     .addIntegerOption(o => o.setName('threshold').setDescription('✅ reactions needed to trigger (default: 13)').setMinValue(1))
-    .addStringOption(o => o.setName('delay').setDescription('Wait after threshold before posting: e.g. 1m 30s, 45s, 0s for instant (default: 5m)'))
+    .addStringOption(o => o.setName('delay').setDescription('Wait after threshold before posting: e.g. 1m 30s, 45s, 0s for instant (default: 30s)'))
     .addChannelOption(o => o.setName('post_channel').setDescription('Channel to post the handpick list in (default: this channel)'))
     .addIntegerOption(o => o.setName('expire_in').setDescription('Remove schedule after X minutes if threshold not reached (default: 30)').setMinValue(1))
     .addIntegerOption(o => o.setName('list_expiry').setDescription('Minutes before the posted list closes for claims (default: 15)').setMinValue(1))
@@ -499,7 +499,7 @@ function setupWatcher(client) {
       const delayRaw     = interaction.options.getString('delay');
       let   delayMs;
       if (delayRaw == null) {
-        delayMs = 5 * 60 * 1000; // default 5m
+        delayMs = 30 * 1000; // default 30s
       } else {
         delayMs = parseMinSec(delayRaw);
         if (delayMs === null) return interaction.reply({ content: '❌ Invalid delay format. Use like `1m 30s`, `45s`, or `0s` for instant.', ephemeral: true });
