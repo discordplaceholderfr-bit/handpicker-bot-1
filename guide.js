@@ -247,28 +247,28 @@ const CATEGORIES = {
     color: 0xff4444,
     fields: [
       {
-        name: '`/delete_list` · `/reset_list` — Admin',
-        value: '`/delete_list` — Delete one active list via dropdown. Removes all its claims and the embed.\n`/reset_list` — Wipe **all** active lists at once. Both ask for confirmation first.\n\n**Rule of thumb:** Use `/delete_list` when one game is cancelled. Use `/reset_list` to fully clear after an event ends.',
+        name: '📋 Lists',
+        value: '`/delete_list` — delete one active list (removes its claims and embed)\n`/reset_list` — wipe **all** active lists',
       },
       {
-        name: '`/delete_preset` · `/reset_presets` — Admin',
-        value: '`/delete_preset` — Delete one saved preset via dropdown.\n`/reset_presets` — Delete **all** saved presets for this server. Asks for confirmation. Cannot be undone.',
+        name: '💾 Presets',
+        value: '`/delete_preset` — delete one saved preset\n`/reset_presets` — delete **all** saved presets',
       },
       {
-        name: '`/delete_player` · `/reset_rankings` — Admin',
-        value: '`/delete_player` — Remove one player from the leaderboard (wipes their MVPs and HMs).\n`/reset_rankings` — Wipe the **entire leaderboard** for this server. Asks for confirmation.',
+        name: '🏆 Leaderboard',
+        value: '`/delete_player` — remove one player (wipes their MVPs and HMs)\n`/reset_rankings` — wipe the **entire** leaderboard',
       },
       {
-        name: '`/clear_teams` — Admin',
-        value: 'Remove **all** faction → team role mappings at once. Players who already have team roles keep them — only future claims are affected.',
+        name: '📊 Schedules',
+        value: '`/remove_schedule` — delete one active schedule\n`/reset_schedule` — delete **all** active schedules',
       },
       {
-        name: '`/remove_schedule` · `/reset_schedule` — Admin',
-        value: '`/remove_schedule` — Delete one specific schedule via dropdown. Stops it tracking reactions entirely; any list it already posted is unaffected.\n`/reset_schedule` — Delete **all** active schedules for this server.\n\n**Use case:** An event is cancelled and you no longer need its schedule.',
+        name: '🏁 Results',
+        value: '`/delete_result` — delete one result (revokes its awards)\n`/reset_results` — wipe **all** results (revokes all their awards)',
       },
       {
-        name: '`/delete_result` · `/reset_results` — Admin',
-        value: '`/delete_result` — Delete one event result via dropdown. Removes the embed from the channel and revokes all MVP/HM awards logged by that result.\n`/reset_results` — Wipe **all** event results for this server, delete their embeds, and revoke all associated awards. Asks for confirmation. Cannot be undone.',
+        name: '🎖️ Teams',
+        value: '`/clear_teams` — remove **all** faction → role mappings',
       },
     ],
   },
