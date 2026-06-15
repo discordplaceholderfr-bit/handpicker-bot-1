@@ -784,14 +784,14 @@ function setupWatcher(client) {
     try {
       const ch  = await client.channels.fetch(pending.channelId);
       if (pending.pingEvent) await ch.send(`<@&${EVENT_PING_ROLE_ID}>`).catch(() => {});
-      // Send the slides link in its OWN message so Discord auto-loads the link
-      // preview card. A message that already carries an embed won't unfurl a
-      // link in its content, so this can't be combined with the schedule embed.
-      if (pending.slidesLink) await ch.send(`📎 **Slides:** ${pending.slidesLink}`).catch(() => {});
       const msg = await ch.send({ embeds: [watchEmbed] });
       pending.messageId = msg.id;
       // Bot reacts ✅ as a visual cue — bot reactions don't count toward threshold
       await msg.react('✅');
+      // Send the slides link in its OWN message (after the embed) so Discord
+      // auto-loads the link preview card. A message that already carries an
+      // embed won't unfurl a link in its content, so it must be separate.
+      if (pending.slidesLink) await ch.send(`📎 **Slides:** ${pending.slidesLink}`).catch(() => {});
     } catch (e) {
       console.warn('finalizePending: failed to post/react to watcher embed:', e.message);
     }
