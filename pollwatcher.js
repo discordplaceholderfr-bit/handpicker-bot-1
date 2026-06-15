@@ -784,10 +784,11 @@ function setupWatcher(client) {
     try {
       const ch  = await client.channels.fetch(pending.channelId);
       if (pending.pingEvent) await ch.send(`<@&${EVENT_PING_ROLE_ID}>`).catch(() => {});
-      // Putting the slides URL in the message content makes Discord auto-load
-      // its link preview card (this never happens for links inside an embed).
-      const content = pending.slidesLink ? `📎 **Slides:** ${pending.slidesLink}` : undefined;
-      const msg = await ch.send({ content, embeds: [watchEmbed] });
+      // Send the slides link in its OWN message so Discord auto-loads the link
+      // preview card. A message that already carries an embed won't unfurl a
+      // link in its content, so this can't be combined with the schedule embed.
+      if (pending.slidesLink) await ch.send(`📎 **Slides:** ${pending.slidesLink}`).catch(() => {});
+      const msg = await ch.send({ embeds: [watchEmbed] });
       pending.messageId = msg.id;
       // Bot reacts ✅ as a visual cue — bot reactions don't count toward threshold
       await msg.react('✅');
