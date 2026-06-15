@@ -570,10 +570,6 @@ function setupHandpicker(client) {
         if (claimedFaction) await assignTeam(interaction.guild, userId, claimedFaction);
       }
 
-      if (claimedName.startsWith('*')) {
-        auditLog('⭐ Major Country Claimed', `<@${userId}> claimed the Major country **${claimedName.slice(1)}** in **"${game.title}"**.`, 0xff9900);
-      }
-
       return interaction.reply({ content: `✅ You claimed **${claimedName}**!` });
     }
 
@@ -700,10 +696,12 @@ function setupHandpicker(client) {
       if (idx === -1) {
         majorRoles[guildId].push(role.id);
         save(ROLES_FILE, majorRoles);
+        auditLog('⭐ Major Role Added', `<@${interaction.user.id}> gave <@&${role.id}> permission to claim Major countries.`, 0xff9900);
         return interaction.reply({ content: `✅ <@&${role.id}> added to Major roles.` });
       } else {
         majorRoles[guildId].splice(idx, 1);
         save(ROLES_FILE, majorRoles);
+        auditLog('⭐ Major Role Removed', `<@${interaction.user.id}> removed <@&${role.id}>'s permission to claim Major countries.`, 0xff9900);
         return interaction.reply({ content: `✅ <@&${role.id}> removed from Major roles.` });
       }
     }
@@ -894,9 +892,6 @@ function setupHandpicker(client) {
     save(GAMES_FILE, games);
     await interaction.update({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });
     checkClaimNotifications(client, gameId, game).catch(() => {});
-    if (country.startsWith('*')) {
-      auditLog('⭐ Major Country Claimed', `<@${userId}> claimed the Major country **${country.slice(1)}** in **"${game.title}"**.`, 0xff9900);
-    }
     if (interaction.guild) {
       const { assignTeam } = require('./teams');
       await assignTeam(interaction.guild, userId, factionName);

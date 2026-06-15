@@ -339,7 +339,7 @@ const CATEGORIES = {
       },
       {
         name: '⭐ Players',
-        value: '• Major (`*`) country claims — who claimed which Major country, in which list',
+        value: '• `/major_role` — when a role gains or loses permission to claim Major countries',
       },
     ],
   },
