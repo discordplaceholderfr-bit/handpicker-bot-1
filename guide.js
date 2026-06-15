@@ -337,6 +337,10 @@ const CATEGORIES = {
         name: '🗑️ Edits, deletions & resets',
         value: '• `/edit_preset` — every change: renames, countries added/removed, factions added/removed\n• `/delete_preset` · `/reset_presets`\n• `/delete_list` · `/reset_list`\n• `/remove_schedule` · `/reset_schedule`\n• `/delete_player` · `/reset_rankings`',
       },
+      {
+        name: '⭐ Players',
+        value: '• Major (`*`) country claims — who claimed which Major country, in which list',
+      },
     ],
   },
 
