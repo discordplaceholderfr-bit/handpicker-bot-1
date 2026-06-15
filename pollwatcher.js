@@ -776,7 +776,7 @@ function setupWatcher(client) {
         { name: '📋 Posts to',       value: `<#${pending.postChannelId}>`,                                        inline: true },
         { name: '⏰ Deadline',       value: expiryText,                                                            inline: true },
         { name: '🔒 List Closes In', value: `${Math.round(pending.listExpiryMs / 60000)} min after posting`,      inline: true },
-        { name: '👥 Preset Players', value: playerCount > 0 ? `${playerCount} pre-assigned` : 'None',             inline: true },
+        ...(playerCount > 0 ? [{ name: '👥 Preset Players', value: `${playerCount} pre-assigned`, inline: true }] : []),
       )
       .setFooter({ text: `ID: #${watcherId.slice(-6)} · Exclusion logs → #homage-poll-log · React ✅ to vote` })
       .setTimestamp();
