@@ -791,7 +791,7 @@ function setupWatcher(client) {
       // Send the slides link in its OWN message (after the embed) so Discord
       // auto-loads the link preview card. A message that already carries an
       // embed won't unfurl a link in its content, so it must be separate.
-      if (pending.slidesLink) await ch.send(`📎 **Slides:** ${pending.slidesLink}`).catch(() => {});
+      if (pending.slidesLink) await ch.send(pending.slidesLink).catch(() => {});
     } catch (e) {
       console.warn('finalizePending: failed to post/react to watcher embed:', e.message);
     }
