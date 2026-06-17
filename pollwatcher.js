@@ -232,7 +232,7 @@ async function doPostHandpickList(client, watcherId, sendPing) {
       return;
     }
 
-    const { buildEmbedFromGame, buildComponentsFromGame, saveGame, pendingGames } = require('./handpicker');
+    const { buildEmbedFromGame, buildComponentsFromGame, saveGame, pendingGames, postUnclaimMessage } = require('./handpicker');
     const gameId      = `${watcher.guildId}_${Date.now()}`;
     const factions    = {};
     const factionOrder = [];
@@ -309,6 +309,7 @@ async function doPostHandpickList(client, watcherId, sendPing) {
     });
 
     game.messageId = msg.id;
+    await postUnclaimMessage(postCh, game, gameId);
     saveGame(gameId, game);
 
     // Start list expiry timer if set

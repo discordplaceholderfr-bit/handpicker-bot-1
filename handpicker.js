@@ -84,6 +84,7 @@ function scheduleGameReset(client, gameId) {
     save(GAMES_FILE, games);
     console.log(`Auto-reset: deleted game ${gameId}`);
     await stripAllTeamRoles(client, g);
+    await deleteUnclaimMessage(client, g);
     try {
       const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
@@ -153,6 +154,7 @@ async function fireListExpiry(client, gameId) {
     delete games[gameId];
     save(GAMES_FILE, games);
     await stripAllTeamRoles(client, g);
+    await deleteUnclaimMessage(client, g);
     try {
       const ch = await client.channels.fetch('1508275084026974293');
       await ch.send({ embeds: [new EmbedBuilder()
@@ -244,66 +246,65 @@ function buildEmbed(game) {
 
 const UNCLAIM_VALUE = '__unclaim__';
 
-function claimOption(country, factionName) {
-  return {
-    label: (country.startsWith('*') ? `🔸 ${country.slice(1)}` : country).slice(0, 100),
-    description: factionName ? factionName.slice(0, 100) : undefined,
-    value: country,
-  };
+function unclaimButtonRow(gameId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`unclaim__${gameId}`)
+      .setLabel('Unclaim My Country')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🚫')
+  );
+}
+
+// True when the Unclaim button can't share the list message (5 factions = 5
+// dropdowns = the whole 5-row budget), so it lives in its own message instead.
+function usesSeparateUnclaim(game) {
+  return Object.keys(game.factions).length >= 5;
 }
 
 function buildComponents(game, gameId) {
   const factionEntries = Object.entries(game.factions);
   const rows = [];
-
-  // Discord allows max 5 action rows. The Unclaim button always takes one row,
-  // so we have room for up to 4 dropdowns. With ≤4 factions, give each its own
-  // dropdown. With 5+, combine all countries into up to 4 dropdowns of 25.
-  if (factionEntries.length <= 4) {
-    for (const [factionName, faction] of factionEntries) {
-      const unclaimed = faction.countries.filter(c => !faction.claims[c]);
-      if (unclaimed.length === 0) continue;
-      rows.push(
-        new ActionRowBuilder().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(`claim__${gameId}__${factionName}`)
-            .setPlaceholder(`Claim in ${factionName}...`)
-            .addOptions(unclaimed.slice(0, 25).map(c => claimOption(c)))
-        )
-      );
-    }
-  } else {
-    const all = [];
-    for (const [factionName, faction] of factionEntries) {
-      for (const c of faction.countries) if (!faction.claims[c]) all.push({ country: c, factionName });
-    }
-    for (let i = 0, chunk = 0; i < all.length && chunk < 4; i += 25, chunk++) {
-      rows.push(
-        new ActionRowBuilder().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(`claim__${gameId}__combined${chunk}`)
-            .setPlaceholder('Claim a country...')
-            .addOptions(all.slice(i, i + 25).map(({ country, factionName }) => claimOption(country, factionName)))
-        )
-      );
-    }
+  // One dropdown per faction. Discord allows max 5 action rows.
+  for (const [factionName, faction] of factionEntries) {
+    if (rows.length >= 5) break;
+    const unclaimed = faction.countries.filter(c => !faction.claims[c]);
+    if (unclaimed.length === 0) continue;
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`claim__${gameId}__${factionName}`)
+          .setPlaceholder(`Claim in ${factionName}...`)
+          .addOptions(unclaimed.slice(0, 25).map(c => ({ label: (c.startsWith('*') ? `🔸 ${c.slice(1)}` : c).slice(0, 100), value: c })))
+      )
+    );
   }
-
-  rows.push(
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`unclaim__${gameId}`)
-        .setLabel('Unclaim My Country')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🚫')
-    )
-  );
+  // Unclaim button shares the message only when there's a spare row.
+  if (!usesSeparateUnclaim(game) && rows.length < 5) rows.push(unclaimButtonRow(gameId));
   return rows;
 }
 
-// Remove the calling user's current claim (used by both the Unclaim button and
-// the folded Unclaim dropdown option). Updates the embed and strips team roles.
-async function performUnclaim(interaction, gameId) {
+// Post the standalone Unclaim button in its own message (5+ faction lists only).
+async function postUnclaimMessage(channel, game, gameId) {
+  if (!usesSeparateUnclaim(game)) return;
+  try {
+    const msg = await channel.send({ components: [unclaimButtonRow(gameId)] });
+    game.unclaimMsgId = msg.id;
+  } catch (e) { console.warn('postUnclaimMessage:', e.message); }
+}
+
+async function deleteUnclaimMessage(client, game) {
+  if (!game?.unclaimMsgId) return;
+  try {
+    const ch  = await client.channels.fetch(game.channelId);
+    const msg = await ch.messages.fetch(game.unclaimMsgId);
+    await msg.delete();
+  } catch { /* already gone */ }
+}
+
+// Remove the calling user's current claim (used by the Unclaim button, whether
+// it's on the list message or its own separate message). Strips team roles.
+async function performUnclaim(client, interaction, gameId) {
   const game = games[gameId];
   if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
   const userId = interaction.user.id;
@@ -316,7 +317,8 @@ async function performUnclaim(interaction, gameId) {
   }
   if (!found) return interaction.reply({ content: "❌ You haven't claimed any country.", ephemeral: true });
   save(GAMES_FILE, games);
-  await interaction.update({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });
+  await interaction.deferUpdate().catch(() => {});
+  await refreshMessage(client, gameId, game);
   if (interaction.guild && removedFaction) {
     const { removeTeam } = require('./teams');
     await removeTeam(interaction.guild, userId, removedFaction);
@@ -922,7 +924,7 @@ function setupHandpicker(client) {
     if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
     const country = interaction.values[0];
     // Folded Unclaim option (back-compat for older 5-faction list messages)
-    if (country === UNCLAIM_VALUE) return performUnclaim(interaction, gameId);
+    if (country === UNCLAIM_VALUE) return performUnclaim(client, interaction, gameId);
     if (game.locked) return interaction.reply({ content: '❌ This handpick list is closed — no more claims are being accepted.', ephemeral: true });
     // Resolve the faction from the picked country (supports per-faction and combined dropdowns)
     let factionName = null, faction = null;
@@ -998,7 +1000,7 @@ function setupHandpicker(client) {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('unclaim__')) return;
     const gameId = interaction.customId.split('__')[1];
-    return performUnclaim(interaction, gameId);
+    return performUnclaim(client, interaction, gameId);
   });
 
   client.on('interactionCreate', async interaction => {
@@ -1355,6 +1357,7 @@ function setupHandpicker(client) {
     const msg = await interaction.followUp({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });
     game.messageId = msg.id;
     games[gameId]  = game;
+    await postUnclaimMessage(interaction.channel, game, gameId);
     save(GAMES_FILE, games);
   }
 
@@ -1390,6 +1393,7 @@ function setupHandpicker(client) {
       const game   = games[gameId];
       const title  = game?.title ?? 'Unknown';
       if (game && interaction.guild) await removeAllTeamRoles(interaction.guild, game);
+      if (game) await deleteUnclaimMessage(client, game);
       delete games[gameId];
       save(GAMES_FILE, games);
       auditLog('🗑️ List Deleted', `<@${interaction.user.id}> deleted the handpick list **"${title}"**.`, 0xff4444);
@@ -1402,7 +1406,7 @@ function setupHandpicker(client) {
       if (interaction.guild) {
         for (const id of guildGameIds) { await removeAllTeamRoles(interaction.guild, games[id]).catch(() => {}); }
       }
-      for (const id of guildGameIds) { delete games[id]; }
+      for (const id of guildGameIds) { await deleteUnclaimMessage(client, games[id]); delete games[id]; }
       save(GAMES_FILE, games);
       auditLog('🗑️ All Lists Reset', `<@${interaction.user.id}> wiped all handpick lists.`, 0xff4444);
       const embed = new EmbedBuilder().setTitle('🗑️ Lists Reset').setDescription(`All handpick lists for this server have been wiped.`).setColor(0xff4444).setTimestamp();
@@ -1420,4 +1424,4 @@ function saveGame(gameId, game) {
   if (_client) scheduleGameReset(_client, gameId);
 }
 
-module.exports = { setupHandpicker, handpickerCommands, buildEmbedFromGame, buildComponentsFromGame, saveGame, pendingGames, scheduleListExpiry };
+module.exports = { setupHandpicker, handpickerCommands, buildEmbedFromGame, buildComponentsFromGame, saveGame, pendingGames, scheduleListExpiry, postUnclaimMessage };

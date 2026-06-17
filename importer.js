@@ -183,7 +183,7 @@ function setupImporter(client) {
         return interaction.editReply('❌ No countries detected. Countries must have a colon e.g. `Germany: Player` or `Germany:`');
       }
 
-      const { buildEmbedFromGame, buildComponentsFromGame, saveGame } = require('./handpicker');
+      const { buildEmbedFromGame, buildComponentsFromGame, saveGame, postUnclaimMessage } = require('./handpicker');
       const guildId      = interaction.guildId;
       const gameId       = `${guildId}_${Date.now()}`;
       const gameFactions = {};
@@ -223,6 +223,7 @@ function setupImporter(client) {
         components: [buildComponentsFromGame(game, gameId)].flat(),
       });
       game.messageId = listMsg.id;
+      await postUnclaimMessage(interaction.channel, game, gameId);
       saveGame(gameId, game);
 
       // Auto-map team roles
