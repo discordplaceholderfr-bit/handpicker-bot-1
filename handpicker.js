@@ -244,42 +244,60 @@ function buildEmbed(game) {
 
 const UNCLAIM_VALUE = '__unclaim__';
 
+function claimOption(country, factionName) {
+  return {
+    label: (country.startsWith('*') ? `🔸 ${country.slice(1)}` : country).slice(0, 100),
+    description: factionName ? factionName.slice(0, 100) : undefined,
+    value: country,
+  };
+}
+
 function buildComponents(game, gameId) {
   const factionEntries = Object.entries(game.factions);
-  // Discord allows max 5 action rows per message. Each faction dropdown takes
-  // one row, and the standalone Unclaim button takes one more. With 5+ factions
-  // there's no room for the button, so fold Unclaim into each dropdown instead.
-  const foldUnclaim = factionEntries.length >= 5;
   const rows = [];
-  for (const [factionName, faction] of factionEntries) {
-    if (rows.length >= 5) break;
-    const unclaimed = faction.countries.filter(c => !faction.claims[c]);
-    const options = [];
-    if (foldUnclaim) options.push({ label: '🚫 Unclaim my country', value: UNCLAIM_VALUE });
-    for (const c of unclaimed) {
-      options.push({ label: (c.startsWith('*') ? `🔸 ${c.slice(1)}` : c).slice(0, 100), value: c });
+
+  // Discord allows max 5 action rows. The Unclaim button always takes one row,
+  // so we have room for up to 4 dropdowns. With ≤4 factions, give each its own
+  // dropdown. With 5+, combine all countries into up to 4 dropdowns of 25.
+  if (factionEntries.length <= 4) {
+    for (const [factionName, faction] of factionEntries) {
+      const unclaimed = faction.countries.filter(c => !faction.claims[c]);
+      if (unclaimed.length === 0) continue;
+      rows.push(
+        new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`claim__${gameId}__${factionName}`)
+            .setPlaceholder(`Claim in ${factionName}...`)
+            .addOptions(unclaimed.slice(0, 25).map(c => claimOption(c)))
+        )
+      );
     }
-    if (options.length === 0) continue; // nothing to show for this faction
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId(`claim__${gameId}__${factionName}`)
-          .setPlaceholder(`Claim in ${factionName}...`)
-          .addOptions(options.slice(0, 25))
-      )
-    );
+  } else {
+    const all = [];
+    for (const [factionName, faction] of factionEntries) {
+      for (const c of faction.countries) if (!faction.claims[c]) all.push({ country: c, factionName });
+    }
+    for (let i = 0, chunk = 0; i < all.length && chunk < 4; i += 25, chunk++) {
+      rows.push(
+        new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`claim__${gameId}__combined${chunk}`)
+            .setPlaceholder('Claim a country...')
+            .addOptions(all.slice(i, i + 25).map(({ country, factionName }) => claimOption(country, factionName)))
+        )
+      );
+    }
   }
-  if (!foldUnclaim && rows.length < 5) {
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`unclaim__${gameId}`)
-          .setLabel('Unclaim My Country')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🚫')
-      )
-    );
-  }
+
+  rows.push(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`unclaim__${gameId}`)
+        .setLabel('Unclaim My Country')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🚫')
+    )
+  );
   return rows;
 }
 
@@ -899,15 +917,19 @@ function setupHandpicker(client) {
     if (!interaction.customId.startsWith('claim__')) return;
     const parts       = interaction.customId.split('__');
     const gameId      = parts[1];
-    const factionName = parts[2];
     const guildId     = interaction.guildId;
     const game        = games[gameId];
     if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
     const country = interaction.values[0];
-    // Folded Unclaim option (used on 5-faction lists with no separate button)
+    // Folded Unclaim option (back-compat for older 5-faction list messages)
     if (country === UNCLAIM_VALUE) return performUnclaim(interaction, gameId);
     if (game.locked) return interaction.reply({ content: '❌ This handpick list is closed — no more claims are being accepted.', ephemeral: true });
-    const faction = game.factions[factionName];
+    // Resolve the faction from the picked country (supports per-faction and combined dropdowns)
+    let factionName = null, faction = null;
+    for (const [fn, f] of Object.entries(game.factions)) {
+      if (f.countries.includes(country)) { factionName = fn; faction = f; break; }
+    }
+    if (!faction) return interaction.reply({ content: '❌ That country is no longer available.', ephemeral: true });
     const userId  = interaction.user.id;
     // Blacklist check
     const bl = getBlacklist(guildId, userId);
