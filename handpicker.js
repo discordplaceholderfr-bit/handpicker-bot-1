@@ -242,31 +242,67 @@ function buildEmbed(game) {
   return embed;
 }
 
+const UNCLAIM_VALUE = '__unclaim__';
+
 function buildComponents(game, gameId) {
+  const factionEntries = Object.entries(game.factions);
+  // Discord allows max 5 action rows per message. Each faction dropdown takes
+  // one row, and the standalone Unclaim button takes one more. With 5+ factions
+  // there's no room for the button, so fold Unclaim into each dropdown instead.
+  const foldUnclaim = factionEntries.length >= 5;
   const rows = [];
-  for (const [factionName, faction] of Object.entries(game.factions)) {
-    const unclaimed = faction.countries.filter(c => !faction.claims[c]);
-    if (unclaimed.length === 0) continue;
+  for (const [factionName, faction] of factionEntries) {
     if (rows.length >= 5) break;
+    const unclaimed = faction.countries.filter(c => !faction.claims[c]);
+    const options = [];
+    if (foldUnclaim) options.push({ label: '🚫 Unclaim my country', value: UNCLAIM_VALUE });
+    for (const c of unclaimed) {
+      options.push({ label: (c.startsWith('*') ? `🔸 ${c.slice(1)}` : c).slice(0, 100), value: c });
+    }
+    if (options.length === 0) continue; // nothing to show for this faction
     rows.push(
       new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId(`claim__${gameId}__${factionName}`)
           .setPlaceholder(`Claim in ${factionName}...`)
-          .addOptions(unclaimed.map(c => ({ label: (c.startsWith('*') ? `🔸 ${c.slice(1)}` : c).slice(0, 100), value: c })))
+          .addOptions(options.slice(0, 25))
       )
     );
   }
-  rows.push(
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`unclaim__${gameId}`)
-        .setLabel('Unclaim My Country')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🚫')
-    )
-  );
+  if (!foldUnclaim && rows.length < 5) {
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`unclaim__${gameId}`)
+          .setLabel('Unclaim My Country')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🚫')
+      )
+    );
+  }
   return rows;
+}
+
+// Remove the calling user's current claim (used by both the Unclaim button and
+// the folded Unclaim dropdown option). Updates the embed and strips team roles.
+async function performUnclaim(interaction, gameId) {
+  const game = games[gameId];
+  if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
+  const userId = interaction.user.id;
+  let found = false, removedFaction = null;
+  for (const [factionName, faction] of Object.entries(game.factions)) {
+    for (const [country, uid] of Object.entries(faction.claims)) {
+      if (uid === userId) { delete faction.claims[country]; found = true; removedFaction = factionName; break; }
+    }
+    if (found) break;
+  }
+  if (!found) return interaction.reply({ content: "❌ You haven't claimed any country.", ephemeral: true });
+  save(GAMES_FILE, games);
+  await interaction.update({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });
+  if (interaction.guild && removedFaction) {
+    const { removeTeam } = require('./teams');
+    await removeTeam(interaction.guild, userId, removedFaction);
+  }
 }
 
 function findGuildGame(guildId) {
@@ -867,9 +903,11 @@ function setupHandpicker(client) {
     const guildId     = interaction.guildId;
     const game        = games[gameId];
     if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
+    const country = interaction.values[0];
+    // Folded Unclaim option (used on 5-faction lists with no separate button)
+    if (country === UNCLAIM_VALUE) return performUnclaim(interaction, gameId);
     if (game.locked) return interaction.reply({ content: '❌ This handpick list is closed — no more claims are being accepted.', ephemeral: true });
     const faction = game.factions[factionName];
-    const country = interaction.values[0];
     const userId  = interaction.user.id;
     // Blacklist check
     const bl = getBlacklist(guildId, userId);
@@ -938,23 +976,7 @@ function setupHandpicker(client) {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('unclaim__')) return;
     const gameId = interaction.customId.split('__')[1];
-    const game   = games[gameId];
-    if (!game) return interaction.reply({ content: '❌ Game not found.', ephemeral: true });
-    const userId = interaction.user.id;
-    let found = false, removedFaction = null;
-    for (const [factionName, faction] of Object.entries(game.factions)) {
-      for (const [country, uid] of Object.entries(faction.claims)) {
-        if (uid === userId) { delete faction.claims[country]; found = true; removedFaction = factionName; break; }
-      }
-      if (found) break;
-    }
-    if (!found) return interaction.reply({ content: "❌ You haven't claimed any country.", ephemeral: true });
-    save(GAMES_FILE, games);
-    await interaction.update({ embeds: [buildEmbed(game)], components: buildComponents(game, gameId) });
-    if (interaction.guild && removedFaction) {
-      const { removeTeam } = require('./teams');
-      await removeTeam(interaction.guild, userId, removedFaction);
-    }
+    return performUnclaim(interaction, gameId);
   });
 
   client.on('interactionCreate', async interaction => {
