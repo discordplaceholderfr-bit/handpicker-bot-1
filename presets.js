@@ -314,7 +314,7 @@ function setupPresets(client) {
     const preset  = presets[guildId]?.[name];
     if (!preset) return interaction.update({ content: '❌ Preset not found.', components: [] });
 
-    await interaction.update({ content: `⏳ Setting up **"${name}"**...`, components: [] });
+    await interaction.deferUpdate();
 
     const { saveGame, pendingGames } = require('./handpicker');
     const gameId      = `${guildId}_${Date.now()}`;
@@ -361,8 +361,10 @@ function setupPresets(client) {
       .setLabel('Skip')
       .setStyle(ButtonStyle.Secondary);
 
-    await interaction.followUp({
-      content: '👥 Do you want to pre-assign players to countries?',
+    // Edit the same (dropdown) message into the prompt — one atomic step, so
+    // there's no separate follow-up message that can fail to send on its own.
+    await interaction.editReply({
+      content: `👥 Setting up **"${name}"** — do you want to pre-assign players to countries?`,
       components: [new ActionRowBuilder().addComponents(presetBtn, skipBtn)],
     });
   });
