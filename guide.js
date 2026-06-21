@@ -2,14 +2,11 @@ const {
   SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+  StringSelectMenuBuilder,
 } = require('discord.js');
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = {
-
-  // ── Section 1 ──────────────────────────────────────────────────────────────
 
   overview: {
     label: '⚡ Overview',
@@ -50,6 +47,14 @@ const CATEGORIES = {
       {
         name: '🗑️ Deletions',
         value: 'Every delete and reset command in one place — wipe lists, presets, leaderboard entries, team mappings, schedules, and results, individually or all at once.',
+      },
+      {
+        name: '📦 Extras',
+        value: 'Overflow country slots that stay locked until every main country is claimed — then the bot DMs you to open or remove them.',
+      },
+      {
+        name: '📝 Logging',
+        value: 'Every moderation and admin action is logged automatically to a dedicated channel showing who did what.',
       },
     ],
   },
@@ -277,23 +282,6 @@ const CATEGORIES = {
     ],
   },
 
-  // ── Section 2 ──────────────────────────────────────────────────────────────
-
-  s2overview: {
-    label: '⚡ Overview',
-    color: 0x1abc9c,
-    fields: [
-      {
-        name: '📦 Extras',
-        value: 'Overflow country slots that stay locked until every main country is claimed. The bot then DMs the host to either open them for claiming (announced in the channel) or remove them from the list.',
-      },
-      {
-        name: '📝 Logging',
-        value: 'Every moderation and admin action — blacklists, awards, results, edits, deletions, and resets — is automatically logged to a dedicated log channel showing who did what.',
-      },
-    ],
-  },
-
   extras: {
     label: '📦 Extras',
     color: 0x1abc9c,
@@ -346,85 +334,54 @@ const CATEGORIES = {
 
 };
 
-// ─── Section layouts ──────────────────────────────────────────────────────────
-const S1_ROW1 = ['overview', 'creating', 'editing', 'presets', 'watcher'];
-const S1_ROW2 = ['restrictions', 'awards', 'players', 'teams', 'resets'];
-const S2_KEYS = ['s2overview', 'extras', 'logging'];
+// ─── Dropdown menu ──────────────────────────────────────────────────────────
+// Order shown in the dropdown + a one-line description for each option.
+const MENU = [
+  { key: 'overview',     desc: 'Start here — what every category covers' },
+  { key: 'creating',     desc: 'Build & import lists, add factions' },
+  { key: 'editing',      desc: 'Change a live list, edit presets' },
+  { key: 'presets',      desc: 'Save, load, edit reusable lists' },
+  { key: 'watcher',      desc: 'Reaction-vote schedules that auto-post' },
+  { key: 'restrictions', desc: 'Blacklist players from votes & claims' },
+  { key: 'awards',       desc: 'MVPs, HMs, rankings & results' },
+  { key: 'players',      desc: 'Claiming, swaps, majors, preset players' },
+  { key: 'teams',        desc: 'Automatic team-role assignment' },
+  { key: 'resets',       desc: 'Delete or wipe lists, presets, results…' },
+  { key: 'extras',       desc: 'Overflow (Extra) country slots' },
+  { key: 'logging',      desc: 'What gets logged, and where' },
+];
 
-// Top-level: two section buttons
-function buildSectionPicker() {
+function buildDropdown(activeKey) {
   return [
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('guide_section__1').setLabel('Section 1').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('guide_section__2').setLabel('Section 2').setStyle(ButtonStyle.Success),
+      new StringSelectMenuBuilder()
+        .setCustomId('guide_cat')
+        .setPlaceholder('📖 Pick a category…')
+        .addOptions(MENU.map(({ key, desc }) => ({
+          label:       CATEGORIES[key].label.slice(0, 100),
+          description: desc.slice(0, 100),
+          value:       key,
+          default:     key === activeKey,
+        })))
     ),
   ];
 }
-
-// Section 1: 2 rows of 5 category buttons + back row
-function buildSection1Rows(activeKey) {
-  function btn(key) {
-    const cat    = CATEGORIES[key];
-    const active = key === activeKey;
-    const style  = key === 'resets'
-      ? (active ? ButtonStyle.Success : ButtonStyle.Danger)
-      : (active ? ButtonStyle.Success : ButtonStyle.Primary);
-    return new ButtonBuilder()
-      .setCustomId(`guide_s1__${key}`)
-      .setLabel(cat.label)
-      .setStyle(style)
-      .setDisabled(active);
-  }
-  return [
-    new ActionRowBuilder().addComponents(S1_ROW1.map(btn)),
-    new ActionRowBuilder().addComponents(S1_ROW2.map(btn)),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('guide_sections').setLabel('← Sections').setStyle(ButtonStyle.Secondary),
-    ),
-  ];
-}
-
-// Section 2: category buttons + back in one row
-function buildSection2Rows(activeKey) {
-  function btn(key) {
-    const cat    = CATEGORIES[key];
-    const active = key === activeKey;
-    return new ButtonBuilder()
-      .setCustomId(`guide_s2__${key}`)
-      .setLabel(cat.label)
-      .setStyle(active ? ButtonStyle.Success : ButtonStyle.Primary)
-      .setDisabled(active);
-  }
-  return [
-    new ActionRowBuilder().addComponents(
-      ...S2_KEYS.map(btn),
-      new ButtonBuilder().setCustomId('guide_sections').setLabel('← Sections').setStyle(ButtonStyle.Secondary),
-    ),
-  ];
-}
-
-// ─── Embeds ───────────────────────────────────────────────────────────────────
-const SECTION_PICKER_EMBED = new EmbedBuilder()
-  .setTitle('📖 Host Guide')
-  .setDescription('Choose a section below.')
-  .addFields(
-    { name: 'Section 1', value: '⚡ Overview · 📋 Creating · ✏️ Editing · 💾 Presets · 📊 Schedule · 🚫 Restrictions · 🏆 Awards · 👥 Players · 🎖️ Teams · 🗑️ Deletions' },
-    { name: 'Section 2', value: '⚡ Overview · 📦 Extras · 📝 Logging' },
-  )
-  .setColor(0x5865f2)
-  .setFooter({ text: 'Click a section button to get started · Tip: !guide also opens this' });
 
 function buildEmbed(key) {
   const cat = CATEGORIES[key];
-  const isOverview = key === 'overview' || key === 's2overview';
-  const footer = isOverview
-    ? 'Click a category button below to see full details'
-    : 'Active button is greyed out · use ← Sections to go back';
+  const footer = key === 'overview'
+    ? 'Pick a category from the menu below to see full details'
+    : 'Use the menu below to jump to another category';
   return new EmbedBuilder()
     .setTitle(cat.label)
     .addFields(cat.fields)
     .setColor(cat.color)
     .setFooter({ text: footer });
+}
+
+// One shared payload builder for the slash reply, the !guide message, and selects
+function buildGuide(key) {
+  return { embeds: [buildEmbed(key)], components: buildDropdown(key) };
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -437,58 +394,29 @@ const guideCommands = [
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 function setupGuide(client) {
-  // /host_guide → section picker
+  // /host_guide → overview + category dropdown
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'host_guide') return;
-    return interaction.reply({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
+    return interaction.reply(buildGuide('overview'));
   });
 
-  // !guide prefix command → same section picker
+  // !guide prefix command → same guide, replying without pinging
   client.on('messageCreate', async message => {
     if (message.author.bot) return;
     if (message.content.trim().toLowerCase() !== '!guide') return;
     try {
-      await message.reply({
-        embeds: [SECTION_PICKER_EMBED],
-        components: buildSectionPicker(),
-        allowedMentions: { repliedUser: false },
-      });
+      await message.reply({ ...buildGuide('overview'), allowedMentions: { repliedUser: false } });
     } catch (e) { console.warn('!guide failed:', e.message); }
   });
 
+  // Category dropdown → swap the embed to the chosen category
   client.on('interactionCreate', async interaction => {
-    if (!interaction.isButton()) return;
-    const { customId } = interaction;
-
-    // Back to section picker
-    if (customId === 'guide_sections') {
-      return interaction.update({ embeds: [SECTION_PICKER_EMBED], components: buildSectionPicker() });
-    }
-
-    // Section 1 landing
-    if (customId === 'guide_section__1') {
-      return interaction.update({ embeds: [buildEmbed('overview')], components: buildSection1Rows('overview') });
-    }
-
-    // Section 2 landing
-    if (customId === 'guide_section__2') {
-      return interaction.update({ embeds: [buildEmbed('s2overview')], components: buildSection2Rows('s2overview') });
-    }
-
-    // Section 1 category button
-    if (customId.startsWith('guide_s1__')) {
-      const key = customId.replace('guide_s1__', '');
-      if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
-      return interaction.update({ embeds: [buildEmbed(key)], components: buildSection1Rows(key) });
-    }
-
-    // Section 2 category button
-    if (customId.startsWith('guide_s2__')) {
-      const key = customId.replace('guide_s2__', '');
-      if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
-      return interaction.update({ embeds: [buildEmbed(key)], components: buildSection2Rows(key) });
-    }
+    if (!interaction.isStringSelectMenu()) return;
+    if (interaction.customId !== 'guide_cat') return;
+    const key = interaction.values[0];
+    if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
+    return interaction.update(buildGuide(key));
   });
 }
 
