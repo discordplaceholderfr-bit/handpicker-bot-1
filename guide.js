@@ -34,7 +34,7 @@ const CATEGORIES = {
       },
       {
         name: '🏆 Awards',
-        value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, and post event results that log awards automatically.',
+        value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, post event results, and auto-grant MVP medal roles (Bronze Star / Airman\'s Medal / Purple Heart).',
       },
       {
         name: '👥 Players',
@@ -189,6 +189,10 @@ const CATEGORIES = {
       {
         name: '`/list_results`',
         value: 'Show all saved event results for this server — event name, date, and faction names for each.',
+      },
+      {
+        name: '🎖️ MVP medal roles',
+        value: 'Players are automatically given a **medal role based on their MVP count** — they hold only the **highest** tier they qualify for:\n• 🟫 **Bronze Star** — 1+ MVPs\n• ✈️ **Airman\'s Medal** — 5+ MVPs\n• 💜 **Purple Heart** — 8+ MVPs\n\nThe role updates automatically whenever MVPs change (given, removed, results posted/edited/deleted). Run **`/sync_medals`** *(Admin)* once to grant medals to everyone who already qualifies.',
       },
     ],
   },

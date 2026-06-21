@@ -1,5 +1,5 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
-const { awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage } = require('./leaderboard');
+const { awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage, syncMedalRoles } = require('./leaderboard');
 const { auditLog } = require('./auditlog');
 
 const {
@@ -162,8 +162,9 @@ function setupResults(client) {
       }
 
       if (!allResults[guildId]) allResults[guildId] = {};
+      const medalUsers = new Set();
       for (const faction of factions) {
-        for (const uid of faction.mvps) awardMVP(guildId, uid, null, 1);
+        for (const uid of faction.mvps) { awardMVP(guildId, uid, null, 1); medalUsers.add(uid); }
         for (const uid of faction.hms)  awardHM(guildId, uid, null, 1);
       }
       const resultId = `result_${guildId}_${Date.now()}`;
@@ -181,6 +182,7 @@ function setupResults(client) {
         saveResults(allResults);
       }
       refreshRankingsMessage(guildId).catch(() => {});
+      for (const uid of medalUsers) syncMedalRoles(interaction.guild, uid).catch(() => {});
       auditLog('🏁 Results Posted', `<@${interaction.user.id}> posted results for **"${eventName}"** (${factions.map(f => f.name).join(' vs ')}).`, 0x57f287);
       return;
     }
@@ -225,7 +227,8 @@ function setupResults(client) {
       const oldHMs  = countAwards(existing.factions, 'hms');
       const newHMs  = countAwards(factions, 'hms');
 
-      for (const uid of new Set([...Object.keys(oldMVPs), ...Object.keys(newMVPs)])) {
+      const mvpChanged = new Set([...Object.keys(oldMVPs), ...Object.keys(newMVPs)]);
+      for (const uid of mvpChanged) {
         const diff = (newMVPs[uid] || 0) - (oldMVPs[uid] || 0);
         if (diff > 0) awardMVP(guildId, uid, null, diff);
         if (diff < 0) removeMVP(guildId, uid, -diff);
@@ -251,6 +254,7 @@ function setupResults(client) {
       }
 
       refreshRankingsMessage(guildId).catch(() => {});
+      for (const uid of mvpChanged) syncMedalRoles(interaction.guild, uid).catch(() => {});
       auditLog('✏️ Result Edited', `<@${interaction.user.id}> edited the result **"${existing.eventName}"**.`, 0xfee75c);
       return interaction.editReply({ content: '✅ Result updated and leaderboard adjusted.' });
       } catch (e) {
@@ -335,6 +339,7 @@ function setupResults(client) {
         delete allResults[guildId][resultId];
         saveResults(allResults);
         refreshRankingsMessage(guildId).catch(() => {});
+        for (const f of result.factions) for (const uid of f.mvps || []) syncMedalRoles(interaction.guild, uid).catch(() => {});
         auditLog('🗑️ Result Deleted', `<@${interaction.user.id}> deleted the result **"${result.eventName}"** (awards revoked).`, 0xff4444);
       }
       return interaction.update({ content: '🗑️ Event result deleted and awards removed.', embeds: [], components: [] });
@@ -343,8 +348,10 @@ function setupResults(client) {
     if (interaction.customId.startsWith('confirm_reset_results__')) {
       const guildId   = interaction.customId.split('__')[1];
       const guildData = allResults[guildId] || {};
+      const medalUsers = new Set();
       for (const result of Object.values(guildData)) {
         revokeAwards(guildId, result.factions);
+        for (const f of result.factions) for (const uid of f.mvps || []) medalUsers.add(uid);
         if (result.messageId && result.channelId) {
           try {
             const ch  = await client.channels.fetch(result.channelId);
@@ -356,6 +363,7 @@ function setupResults(client) {
       allResults[guildId] = {};
       saveResults(allResults);
       refreshRankingsMessage(guildId).catch(() => {});
+      for (const uid of medalUsers) syncMedalRoles(interaction.guild, uid).catch(() => {});
       auditLog('🗑️ All Results Wiped', `<@${interaction.user.id}> wiped all event results (awards revoked).`, 0xff4444);
       return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }

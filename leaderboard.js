@@ -49,6 +49,40 @@ function getUser(guildId, userId, username) {
 // Score: 1 MVP = 2 pts, 1 HM = 1 pt
 function score(p) { return p.mvps * 2 + p.hms; }
 
+// ── Medal roles by MVP count (highest tier only) ─────────────────────────────
+// Sorted high → low so the first one a user qualifies for is their top medal.
+const MEDAL_ROLES = [
+  { roleId: '1463738464120869028', minMvps: 8, name: 'Purple Heart' },
+  { roleId: '1463377181198782667', minMvps: 5, name: "Airman's Medal" },
+  { roleId: '1463429416108429386', minMvps: 1, name: 'Bronze Star' },
+];
+
+// Give the member only the highest medal role they qualify for; strip the rest.
+// Reads the user's current MVP count from the in-memory leaderboard.
+async function syncMedalRoles(guild, userId) {
+  if (!guild) return;
+  let member;
+  try { member = await guild.members.fetch(userId); } catch { return; } // left the server
+  const mvps   = lb[guild.id]?.[userId]?.mvps || 0;
+  const earned = MEDAL_ROLES.find(m => mvps >= m.minMvps) || null;
+  for (const m of MEDAL_ROLES) {
+    const has = member.roles.cache.has(m.roleId);
+    if (earned && m.roleId === earned.roleId) {
+      if (!has) await member.roles.add(m.roleId).catch(() => {});
+    } else if (has) {
+      await member.roles.remove(m.roleId).catch(() => {});
+    }
+  }
+}
+
+// One-time backfill: sync medals for everyone on a guild's leaderboard.
+async function syncAllMedals(guild) {
+  if (!guild) return 0;
+  const ids = Object.keys(lb[guild.id] || {});
+  for (const userId of ids) await syncMedalRoles(guild, userId);
+  return ids.length;
+}
+
 function awardMVP(guildId, userId, username, amount = 1) {
   const user = getUser(guildId, userId, username);
   user.mvps += amount;
@@ -206,6 +240,11 @@ const leaderboardCommands = [
     .setName('delete_player')
     .setDescription('Admin: Pick a player from a dropdown and remove them from the leaderboard')
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName('sync_medals')
+    .setDescription('Admin: Re-sync MVP medal roles for everyone on the leaderboard')
+    .toJSON(),
 ];
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -233,6 +272,7 @@ function setupLeaderboard(client) {
         .setColor(0xffd700).setTimestamp();
       await interaction.reply({ embeds: [embed] }); // public
       refreshRankingsMessage(guildId).catch(() => {});
+      syncMedalRoles(interaction.guild, target.id).catch(() => {});
       auditLog('⭐ MVP Given', `<@${interaction.user.id}> gave **${amount} MVP${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.mvps}).`, 0xffd700);
       return;
     }
@@ -269,6 +309,7 @@ function setupLeaderboard(client) {
       saveLB(lb);
       await interaction.reply({ content: `✅ Removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.mvps}**.` });
       refreshRankingsMessage(guildId).catch(() => {});
+      syncMedalRoles(interaction.guild, target.id).catch(() => {});
       auditLog('⭐ MVP Removed', `<@${interaction.user.id}> removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.mvps}).`, 0xed4245);
       return;
     }
@@ -293,6 +334,14 @@ function setupLeaderboard(client) {
       pins[guildId] = { channelId: msg.channelId, messageId: msg.id };
       savePins(pins);
       return;
+    }
+
+    if (commandName === 'sync_medals') {
+      if (!isAdmin(interaction.member)) return denyAdmin(interaction);
+      await interaction.deferReply({ ephemeral: true });
+      const count = await syncAllMedals(interaction.guild);
+      auditLog('🎖️ Medals Synced', `<@${interaction.user.id}> re-synced MVP medal roles for **${count}** player(s).`, 0xffd700);
+      return interaction.editReply({ content: `✅ Synced medal roles for **${count}** player(s) on the leaderboard.` });
     }
 
     if (commandName === 'delete_player') {
@@ -368,9 +417,12 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
 
     if (interaction.customId.startsWith('confirm_reset_rankings__')) {
       const targetGuildId = interaction.customId.split('__')[1];
+      const clearedIds    = Object.keys(lb[targetGuildId] || {});
       lb[targetGuildId] = {};
       saveLB(lb);
       refreshRankingsMessage(targetGuildId).catch(() => {});
+      // Strip medal roles from everyone who was on the leaderboard (now 0 MVPs)
+      if (interaction.guild) for (const uid of clearedIds) syncMedalRoles(interaction.guild, uid).catch(() => {});
       auditLog('🗑️ Leaderboard Reset', `<@${interaction.user.id}> wiped the entire leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Leaderboard Reset')
@@ -386,6 +438,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       delete lb[targetGuildId]?.[targetUserId];
       saveLB(lb);
       refreshRankingsMessage(targetGuildId).catch(() => {});
+      syncMedalRoles(interaction.guild, targetUserId).catch(() => {}); // now 0 MVPs → strips medals
       auditLog('🗑️ Player Removed from Leaderboard', `<@${interaction.user.id}> removed <@${targetUserId}> from the leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Player Removed')
@@ -396,4 +449,4 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
   });
 }
 
-module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage };
+module.exports = { setupLeaderboard, leaderboardCommands, awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage, syncMedalRoles };
