@@ -565,7 +565,7 @@ function setupWatcher(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_watcher__${guildId}`).setLabel(`Yes, delete all ${guildWatchers.length} schedule(s)`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset_watcher').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
     }
 
     // ── /delay_watcher ──────────────────────────────────────────────────────

@@ -49,20 +49,24 @@ function buildResultEmbed(result) {
 }
 
 // Parse a posted results message into MVP/HM user IDs.
-// A line naming "MVP" / "HM"(/"HMS"/"honorable mention") sets the current award
-// type; the first @mention on that line OR any following lines (until the type
-// changes) is awarded that type. Mentions before any MVP/HM heading (e.g. the
-// summary) are ignored. Each user is counted once per type.
-function parseAwards(content) {
-  const mentionRe = /<@!?(\d+)>/;
+// A line naming "MVP" / "HM"(/"HMS"/"honorable mention") is a heading that
+// "arms" that award type; the FIRST non-bot @mention after it (on the heading
+// line itself or a following line) wins ONE award, then it disarms until the
+// next heading. This grants one recipient per heading (two MVP headings = two
+// MVPs) and stops trailing pings / ally-mentions from piling up. Bot mentions
+// are always skipped, and mentions before the first heading (your summary) are
+// ignored. `botIds` is the set of bot user IDs mentioned in the message.
+function parseAwards(content, botIds = new Set()) {
+  const mentionRe = /<@!?(\d+)>/g;
   const mvp = new Set(), hm = new Set();
-  let mode = null;
+  let mode = null, armed = false;
   for (const line of (content || '').split('\n')) {
     const lower = line.toLowerCase();
-    if (/\bmvp\b/.test(lower)) mode = 'mvp';
-    else if (/\bhms?\b/.test(lower) || lower.includes('honorable mention')) mode = 'hm';
-    const m = line.match(mentionRe);            // first mention on the line only
-    if (m && mode) (mode === 'mvp' ? mvp : hm).add(m[1]);
+    if (/\bmvp\b/.test(lower))                                              { mode = 'mvp'; armed = true; }
+    else if (/\bhms?\b/.test(lower) || lower.includes('honorable mention')) { mode = 'hm';  armed = true; }
+    if (!armed || !mode) continue;
+    const id = [...line.matchAll(mentionRe)].map(m => m[1]).find(i => !botIds.has(i));
+    if (id) { (mode === 'mvp' ? mvp : hm).add(id); armed = false; }
   }
   return { mvps: [...mvp], hms: [...hm] };
 }
@@ -305,7 +309,7 @@ function setupResults(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_results__${guildId}`).setLabel('Yes, wipe all').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
     }
   });
 
@@ -420,7 +424,8 @@ function showResultPicker(interaction, guildId, customIdPrefix, placeholder) {
       .setPlaceholder('Choose a result...')
       .addOptions(options)
   );
-  return interaction.reply({ content: placeholder, components: [row] });
+  // Ephemeral so only the admin who ran the command can use the dropdown/buttons
+  return interaction.reply({ content: placeholder, components: [row], ephemeral: true });
 }
 
 module.exports = { setupResults, resultsCommands };

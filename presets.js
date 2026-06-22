@@ -218,7 +218,7 @@ function setupPresets(client) {
           .setPlaceholder('Choose a preset to delete...')
           .addOptions(opts)
       );
-      return interaction.reply({ content: '🗑️ Which preset do you want to delete?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which preset do you want to delete?', components: [row], ephemeral: true });
     }
 
     // ── /preview_preset — dropdown picker ────────────────────────────────────
@@ -264,7 +264,7 @@ function setupPresets(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_presets__${guildId}`).setLabel(`Yes, delete all ${count} preset${count !== 1 ? 's' : ''}`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
     }
   });
 

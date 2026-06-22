@@ -765,7 +765,7 @@ function setupHandpicker(client) {
     if (commandName === 'delete_list') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const guildGames = Object.entries(games).filter(([, g]) => g.guildId === guildId);
-      if (guildGames.length === 0) return interaction.reply({ content: '❌ No active handpick lists to delete.' });
+      if (guildGames.length === 0) return interaction.reply({ content: '❌ No active handpick lists to delete.', ephemeral: true });
 
       if (guildGames.length === 1) {
         const [gameId, game] = guildGames[0];
@@ -777,7 +777,7 @@ function setupHandpicker(client) {
           new ButtonBuilder().setCustomId(`confirm_delete_list__${gameId}`).setLabel(`Yes, delete "${game.title.slice(0, 50)}"`).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
           new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
         );
-        return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+        return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
       }
 
       const options = guildGames.map(([gameId, game]) => ({
@@ -788,7 +788,7 @@ function setupHandpicker(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder().setCustomId(`delete_list_pick__${interaction.user.id}`).setPlaceholder('Choose which list to delete...').addOptions(options)
       );
-      return interaction.reply({ content: `🗑️ You have **${guildGames.length}** active lists. Which one do you want to delete?`, components: [row] });
+      return interaction.reply({ content: `🗑️ You have **${guildGames.length}** active lists. Which one do you want to delete?`, components: [row], ephemeral: true });
     }
 
     if (commandName === 'remove_nation') {
@@ -909,7 +909,7 @@ function setupHandpicker(client) {
         new ButtonBuilder().setCustomId('confirm_reset_list').setLabel('Yes, reset everything').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
     }
 
   });

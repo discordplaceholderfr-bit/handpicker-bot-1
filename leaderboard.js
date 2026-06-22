@@ -365,7 +365,7 @@ function setupLeaderboard(client) {
           .setPlaceholder('Choose a player to remove...')
           .addOptions(options)
       );
-      return interaction.reply({ content: '🗑️ Which player do you want to remove from the leaderboard?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which player do you want to remove from the leaderboard?', components: [row], ephemeral: true });
     }
     if (commandName === 'reset_rankings') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
@@ -377,7 +377,7 @@ function setupLeaderboard(client) {
         new ButtonBuilder().setCustomId(`confirm_reset_rankings__${guildId}`).setLabel('Yes, wipe it').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('cancel_reset').setLabel('Cancel').setStyle(ButtonStyle.Secondary).setEmoji('✖️'),
       );
-      return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+      return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
     }
   });
 
