@@ -129,17 +129,6 @@ const resultsCommands = [
     .addStringOption(o => o.setName('summary').setDescription('Brief summary (optional)'))
     .toJSON(),
 
-  new SlashCommandBuilder()
-    .setName('log_results')
-    .setDescription('Host: Log MVPs/HMs to the leaderboard from your own posted results message')
-    .addUserOption(o => o.setName('mvp1').setDescription('First MVP'))
-    .addUserOption(o => o.setName('mvp2').setDescription('Second MVP (optional)'))
-    .addUserOption(o => o.setName('hm1').setDescription('Honorable Mention 1'))
-    .addUserOption(o => o.setName('hm2').setDescription('Honorable Mention 2'))
-    .addUserOption(o => o.setName('hm3').setDescription('Honorable Mention 3'))
-    .addStringOption(o => o.setName('event_name').setDescription('Event name (optional, for the log)'))
-    .toJSON(),
-
   // Right-click a results message → Apps → "Log Results (read message)"
   new ContextMenuCommandBuilder()
     .setName('Log Results (read message)')
@@ -286,27 +275,6 @@ function setupResults(client) {
       }
     }
 
-    if (commandName === 'log_results') {
-      if (!isHost(interaction.member)) return denyHost(interaction);
-      const mvps = ['mvp1', 'mvp2'].map(o => interaction.options.getUser(o)).filter(Boolean);
-      const hms  = ['hm1', 'hm2', 'hm3'].map(o => interaction.options.getUser(o)).filter(Boolean);
-      if (!mvps.length && !hms.length) {
-        return interaction.reply({ content: '❌ Pick at least one MVP or HM to log.', ephemeral: true });
-      }
-      const eventName = interaction.options.getString('event_name');
-
-      logResults(interaction, { mvps: mvps.map(u => u.id), hms: hms.map(u => u.id), eventName, sourceUrl: null });
-
-      const parts = [];
-      if (mvps.length) parts.push(`**${mvps.length} MVP${mvps.length > 1 ? 's' : ''}** — ${mvps.map(u => `<@${u.id}>`).join(', ')}`);
-      if (hms.length)  parts.push(`**${hms.length} HM${hms.length > 1 ? 's' : ''}** — ${hms.map(u => `<@${u.id}>`).join(', ')}`);
-      const forEvent = eventName ? ` for **"${eventName}"**` : '';
-      auditLog('🏁 Results Logged', `<@${interaction.user.id}> logged ${parts.join(' · ')}${forEvent}.`, 0x57f287);
-
-      // Non-ephemeral confirmation (auto-deleted after 12s by index.js)
-      return interaction.reply({ content: `✅ Logged${forEvent}:\n${parts.join('\n')}\n\nRankings and medal roles updated.` });
-    }
-
     if (commandName === 'list_results') {
       const entries = Object.entries(allResults[guildId] || {});
       if (!entries.length) return interaction.reply({ content: '❌ No event results saved for this server.', ephemeral: true });
@@ -351,9 +319,21 @@ function setupResults(client) {
     const result   = allResults[guildId]?.[resultId];
     if (!result) return interaction.update({ content: '❌ Result not found.', components: [] });
 
+    const date     = new Date(result.createdAt).toLocaleDateString();
+    const allMvps  = (result.factions || []).flatMap(f => f.mvps || []);
+    const allHms   = (result.factions || []).flatMap(f => f.hms  || []);
+    const awards   = [];
+    if (allMvps.length) awards.push(`⭐ **MVP:** ${allMvps.map(id => `<@${id}>`).join(', ')}`);
+    if (allHms.length)  awards.push(`🏅 **HM:** ${allHms.map(id => `<@${id}>`).join(', ')}`);
+    const link     = result.sourceUrl ? `\n\n🔗 [Jump to the results message](${result.sourceUrl})` : '';
+
     const confirmEmbed = new EmbedBuilder()
       .setTitle('⚠️ Confirm Result Deletion')
-      .setDescription(`Delete **${result.eventName}**?\n\nAwards already given to the leaderboard are **not** reversed.\n\n**This cannot be undone.**`)
+      .setDescription(
+        `Delete **${result.eventName}** *(${date})*?` +
+        (awards.length ? `\n\n${awards.join('\n')}` : '') +
+        `\n\nThese awards **will be removed** from the leaderboard and medal roles re-synced.${link}\n\n**This cannot be undone.**`
+      )
       .setColor(0xff4444);
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`confirm_delete_result__${guildId}__${resultId}`).setLabel('Yes, delete it').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
@@ -425,11 +405,15 @@ function revokeAwards(guildId, factions) {
 function showResultPicker(interaction, guildId, customIdPrefix, placeholder) {
   const entries = Object.entries(allResults[guildId] || {});
   if (!entries.length) return interaction.reply({ content: '❌ No event results saved for this server.', ephemeral: true });
-  const options = entries.map(([id, r]) => ({
-    label:       r.eventName.slice(0, 100),
-    description: new Date(r.createdAt).toLocaleDateString(),
-    value:       id,
-  }));
+  const options = entries.map(([id, r]) => {
+    const mvps = (r.factions || []).reduce((s, f) => s + (f.mvps?.length || 0), 0);
+    const hms  = (r.factions || []).reduce((s, f) => s + (f.hms?.length  || 0), 0);
+    return {
+      label:       r.eventName.slice(0, 100),
+      description: `${new Date(r.createdAt).toLocaleDateString()} · ⭐${mvps} 🏅${hms}`.slice(0, 100),
+      value:       id,
+    };
+  });
   const row = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${customIdPrefix}__${guildId}`)

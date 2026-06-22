@@ -180,7 +180,7 @@ const CATEGORIES = {
       },
       {
         name: 'Logging results — Host',
-        value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then log the awards to the leaderboard one of two ways:\n\n**📖 Read the message (easiest):** right-click your results message → **Apps → "Log Results (read message)"**. The bot reads it and auto-awards anyone @mentioned under an **MVP** or **HM** heading — first @mention per line, names before the first heading (your summary) are ignored.\n\n**✍️ By hand:** `/log_results` and pick the winners by @mention — `mvp1`, `mvp2` (up to **2 MVPs**) and `hm1`/`hm2`/`hm3`, plus optional `event_name`.\n\nEither way it updates the rankings and medal roles, saves a result record (manageable below), and the confirmation clears itself after a few seconds. If the reader grabs someone by mistake, fix it with `/remove_mvp` / `/remove_hm`.',
+        value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then **right-click it → Apps → "Log Results (read message)"**.\n\nThe bot reads the message and auto-awards anyone @mentioned under an **MVP** or **HM** heading (the first @mention per line; names before the first heading — your summary — are ignored). It updates the rankings and medal roles, saves a result record (manageable below), and the confirmation clears itself after a few seconds.\n\nIf it grabs someone by mistake, fix it with `/remove_mvp` / `/remove_hm`.',
       },
       {
         name: '`/list_results` · `/edit_result` · `/delete_result` · `/reset_results`',
@@ -319,7 +319,7 @@ const CATEGORIES = {
       },
       {
         name: '🏆 Awards & Results',
-        value: '• `/give_mvp` · `/give_hm` — who gave how many to whom, with new totals\n• `/remove_mvp` · `/remove_hm` — same for removals\n• `/log_results` — MVPs/HMs logged\n• `/edit_result` — which result was edited\n• `/delete_result` · `/reset_results` — deletions with awards revoked',
+        value: '• `/give_mvp` · `/give_hm` — who gave how many to whom, with new totals\n• `/remove_mvp` · `/remove_hm` — same for removals\n• **Log Results** (message reader) — MVPs/HMs logged\n• `/edit_result` — which result was edited\n• `/delete_result` · `/reset_results` — deletions with awards revoked',
       },
       {
         name: '🗑️ Edits, deletions & resets',
