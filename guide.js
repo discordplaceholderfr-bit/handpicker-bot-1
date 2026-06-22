@@ -179,8 +179,12 @@ const CATEGORIES = {
         value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player\n\nThe rankings embed auto-updates whenever an MVP or HM is given, removed, or results are posted.',
       },
       {
+        name: '`/log_results` — Host',
+        value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then run `/log_results` to record the awards to the leaderboard.\n\nPick the winners by @mention: `mvp1`, `mvp2` (up to **2 MVPs**), and `hm1`/`hm2`/`hm3`. Optionally add `event_name` for the log. It updates the rankings and medal roles automatically.\n\nThe confirmation posts in the channel and clears itself after a few seconds.',
+      },
+      {
         name: '`/post_results` — Host',
-        value: 'Post an event results embed and automatically log MVPs and HMs to the leaderboard in one step. Up to 2 factions, each with 1 MVP slot and up to 3 HM slots — tag players directly using Discord\'s @mention selector.\n\n**Options:** `event_name` *(required)*, `faction1_name` *(required)*, `faction1_mvp`, `faction1_hm1/2/3`, `faction2_name`, `faction2_mvp`, `faction2_hm1/2/3`, `summary`.',
+        value: 'Quick alternative that builds the results **embed for you** and logs MVPs/HMs in one step. Up to 2 factions, each with 1 MVP slot and up to 3 HM slots — tag players via Discord\'s @mention selector.\n\n**Options:** `event_name` *(required)*, `faction1_name` *(required)*, `faction1_mvp`, `faction1_hm1/2/3`, `faction2_name`, `faction2_mvp`, `faction2_hm1/2/3`, `summary`. Use `/log_results` instead if you want full control over the post\'s look.',
       },
       {
         name: '`/edit_result` — Admin',
