@@ -17,6 +17,7 @@ const POLL_LOG_CHANNEL_ID = '1508275084026974293';
 const EVENT_PING_ROLE_ID  = '1464057119841062944';
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, 'data');
 const WATCHERS_FILE  = path.join(DATA_DIR, 'watchers.json');
@@ -28,8 +29,7 @@ function loadWatchers() {
   catch { return {}; }
 }
 function saveWatchers(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(WATCHERS_FILE, JSON.stringify(data, null, 2));
+  writeJson(WATCHERS_FILE, data);
 }
 function loadPresets() {
   try { return fs.existsSync(PRESETS_FILE) ? JSON.parse(fs.readFileSync(PRESETS_FILE, 'utf8')) : {}; }
@@ -265,8 +265,7 @@ async function doPostHandpickList(client, watcherId, sendPing) {
         factionOrder.forEach((fName, i) => {
           teamsData[watcher.guildId][fName] = { roleId: roleArray[i].id };
         });
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-        fs.writeFileSync(TEAMS_FILE_PATH, JSON.stringify(teamsData, null, 2));
+        writeJson(TEAMS_FILE_PATH, teamsData);
         try { const tm = require('./teams'); if (tm._reloadTeams) tm._reloadTeams(); } catch {}
       }
     } catch (e) { console.warn('auto-map team roles error:', e.message); }

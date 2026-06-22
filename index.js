@@ -9,8 +9,18 @@ const { setupWatcher, watcherCommands } = require('./pollwatcher');
 const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
 const { initAuditLog } = require('./auditlog');
+const lock = require('./lock');
 
 process.setMaxListeners(100);
+
+// Keep the bot alive on unexpected errors instead of crashing the whole process.
+// A single bad interaction handler should never take the bot down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
 
 const client = new Client({
   intents: [
@@ -167,4 +177,10 @@ setupWatcher(client);
 setupGuide(client);
 setupResults(client);
 
-client.login(process.env.DISCORD_TOKEN);
+// Acquire the single-instance lock BEFORE connecting, so only one copy of the
+// bot is ever on the gateway (prevents double reactions / double posts / double
+// role assignments during Railway redeploys).
+(async () => {
+  await lock.acquire();
+  await client.login(process.env.DISCORD_TOKEN);
+})();

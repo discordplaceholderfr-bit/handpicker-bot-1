@@ -15,6 +15,7 @@ const {
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PRESETS_FILE = path.join(DATA_DIR, 'presets.json');
@@ -25,8 +26,7 @@ function loadPresets() {
   catch { return {}; }
 }
 function savePresets(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(PRESETS_FILE, JSON.stringify(data, null, 2));
+  writeJson(PRESETS_FILE, data);
 }
 function loadGames() {
   try { return fs.existsSync(GAMES_FILE) ? JSON.parse(fs.readFileSync(GAMES_FILE, 'utf8')) : {}; }
@@ -336,7 +336,7 @@ function setupPresets(client) {
         .sort((a, b) => parseInt(a.name.match(/\d+/)[0]) - parseInt(b.name.match(/\d+/)[0]));
 
       if (teamRoles.size >= factionOrder.length) {
-        const TEAMS_FILE_PATH = require('path').join(__dirname, 'data', 'teams.json');
+        const TEAMS_FILE_PATH = path.join(DATA_DIR, 'teams.json');
         let teamsData = {};
         try { teamsData = JSON.parse(require('fs').readFileSync(TEAMS_FILE_PATH, 'utf8')); } catch {}
         if (!teamsData[guildId]) teamsData[guildId] = {};
@@ -344,8 +344,7 @@ function setupPresets(client) {
         factionOrder.forEach((factionName, i) => {
           teamsData[guildId][factionName] = { roleId: roleArray[i].id };
         });
-        require('fs').mkdirSync(require('path').join(__dirname, 'data'), { recursive: true });
-        require('fs').writeFileSync(TEAMS_FILE_PATH, JSON.stringify(teamsData, null, 2));
+        writeJson(TEAMS_FILE_PATH, teamsData);
         try { const tm = require('./teams'); if (tm._reloadTeams) tm._reloadTeams(); } catch {}
       }
     }

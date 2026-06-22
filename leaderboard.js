@@ -12,6 +12,7 @@ const {
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const LB_FILE     = path.join(DATA_DIR, 'leaderboard.json');
@@ -22,8 +23,7 @@ function loadLB() {
   catch { return {}; }
 }
 function saveLB(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(LB_FILE, JSON.stringify(data, null, 2));
+  writeJson(LB_FILE, data);
 }
 
 function loadPins() {
@@ -31,8 +31,7 @@ function loadPins() {
   catch { return {}; }
 }
 function savePins(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(RANKPIN_FILE, JSON.stringify(data, null, 2));
+  writeJson(RANKPIN_FILE, data);
 }
 
 let lb   = loadLB();

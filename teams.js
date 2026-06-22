@@ -10,6 +10,7 @@ const {
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const TEAMS_FILE = path.join(DATA_DIR, 'teams.json');
@@ -20,8 +21,7 @@ function loadTeams() {
   catch { return {}; }
 }
 function saveTeams(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(TEAMS_FILE, JSON.stringify(data, null, 2));
+  writeJson(TEAMS_FILE, data);
 }
 function loadGames() {
   try { return fs.existsSync(GAMES_FILE) ? JSON.parse(fs.readFileSync(GAMES_FILE, 'utf8')) : {}; }

@@ -1,5 +1,6 @@
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, 'data');
 const BLACKLIST_FILE = path.join(DATA_DIR, 'blacklist.json');
@@ -9,8 +10,7 @@ function loadBlacklist() {
   catch { return {}; }
 }
 function saveBlacklist(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(data, null, 2));
+  writeJson(BLACKLIST_FILE, data);
 }
 
 // Single shared in-memory copy (Node caches this module, so handpicker.js and

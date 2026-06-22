@@ -233,7 +233,8 @@ function setupImporter(client) {
           .sort((a, b) => parseInt(a.name.match(/\d+/)[0]) - parseInt(b.name.match(/\d+/)[0]));
 
         if (teamRoles.size >= factionOrder.length) {
-          const TEAMS_FILE_PATH = require('path').join(__dirname, 'data', 'teams.json');
+          const DATA_DIR = process.env.DATA_DIR || require('path').join(__dirname, 'data');
+          const TEAMS_FILE_PATH = require('path').join(DATA_DIR, 'teams.json');
           let teamsData = {};
           try { teamsData = JSON.parse(require('fs').readFileSync(TEAMS_FILE_PATH, 'utf8')); } catch {}
           if (!teamsData[guildId]) teamsData[guildId] = {};
@@ -246,8 +247,7 @@ function setupImporter(client) {
             mappingLines.push(`**${factionName}** → <@&${role.id}>`);
           });
 
-          require('fs').mkdirSync(require('path').join(__dirname, 'data'), { recursive: true });
-          require('fs').writeFileSync(TEAMS_FILE_PATH, JSON.stringify(teamsData, null, 2));
+          require('./jsonstore').writeJson(TEAMS_FILE_PATH, teamsData);
 
           try {
             const teamsModule = require('./teams');

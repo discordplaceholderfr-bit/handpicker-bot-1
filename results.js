@@ -14,6 +14,7 @@ const {
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { writeJson } = require('./jsonstore');
 
 const DATA_DIR     = process.env.DATA_DIR || path.join(__dirname, 'data');
 const RESULTS_FILE = path.join(DATA_DIR, 'results.json');
@@ -23,8 +24,7 @@ function loadResults() {
   catch { return {}; }
 }
 function saveResults(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(RESULTS_FILE, JSON.stringify(data, null, 2));
+  writeJson(RESULTS_FILE, data);
 }
 
 let allResults = loadResults();
