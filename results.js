@@ -46,22 +46,6 @@ function buildResultEmbed(result) {
   return embed;
 }
 
-// Shared options builder — used by both post_results and edit_result
-function addFactionOptions(builder) {
-  return builder
-    .addStringOption(o => o.setName('faction1_name').setDescription('First faction name').setRequired(true))
-    .addUserOption(o => o.setName('faction1_mvp').setDescription('MVP of faction 1'))
-    .addUserOption(o => o.setName('faction1_hm1').setDescription('HM 1 of faction 1'))
-    .addUserOption(o => o.setName('faction1_hm2').setDescription('HM 2 of faction 1'))
-    .addUserOption(o => o.setName('faction1_hm3').setDescription('HM 3 of faction 1'))
-    .addStringOption(o => o.setName('faction2_name').setDescription('Second faction name'))
-    .addUserOption(o => o.setName('faction2_mvp').setDescription('MVP of faction 2'))
-    .addUserOption(o => o.setName('faction2_hm1').setDescription('HM 1 of faction 2'))
-    .addUserOption(o => o.setName('faction2_hm2').setDescription('HM 2 of faction 2'))
-    .addUserOption(o => o.setName('faction2_hm3').setDescription('HM 3 of faction 2'))
-    .addStringOption(o => o.setName('summary').setDescription('Brief summary (optional)'));
-}
-
 // Read faction options from an interaction (i=1 or 2)
 function readFactions(interaction) {
   const factions = [];
@@ -83,13 +67,6 @@ function readFactions(interaction) {
 
 // ─── Slash command definitions ────────────────────────────────────────────────
 const resultsCommands = [
-  addFactionOptions(
-    new SlashCommandBuilder()
-      .setName('post_results')
-      .setDescription('Host: Post event results and auto-log MVPs/HMs to the leaderboard')
-      .addStringOption(o => o.setName('event_name').setDescription('Name of the event').setRequired(true))
-  ).toJSON(),
-
   new SlashCommandBuilder()
     .setName('edit_result')
     .setDescription('Admin: Edit a saved event result and adjust leaderboard awards automatically')
@@ -159,44 +136,6 @@ function setupResults(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const { commandName, guildId } = interaction;
-
-    if (commandName === 'post_results') {
-      if (!isHost(interaction.member)) return denyHost(interaction);
-      await interaction.deferReply();
-
-      const eventName = interaction.options.getString('event_name');
-      const summary   = interaction.options.getString('summary') || '';
-      const factions  = readFactions(interaction);
-
-      if (!factions.length) {
-        return interaction.editReply({ content: '❌ At least one faction is required.' });
-      }
-
-      if (!allResults[guildId]) allResults[guildId] = {};
-      const medalUsers = new Set();
-      for (const faction of factions) {
-        for (const uid of faction.mvps) { awardMVP(guildId, uid, null, 1); medalUsers.add(uid); }
-        for (const uid of faction.hms)  awardHM(guildId, uid, null, 1);
-      }
-      const resultId = `result_${guildId}_${Date.now()}`;
-      allResults[guildId][resultId] = {
-        eventName, summary, factions,
-        createdAt:    Date.now(),
-        postedById:   interaction.user.id,
-        postedByName: interaction.user.username,
-      };
-      saveResults(allResults);
-      const msg = await interaction.editReply({ embeds: [buildResultEmbed(allResults[guildId][resultId])] });
-      if (msg) {
-        allResults[guildId][resultId].messageId = msg.id;
-        allResults[guildId][resultId].channelId = msg.channelId;
-        saveResults(allResults);
-      }
-      refreshRankingsMessage(guildId).catch(() => {});
-      for (const uid of medalUsers) syncMedalRoles(interaction.guild, uid).catch(() => {});
-      auditLog('🏁 Results Posted', `<@${interaction.user.id}> posted results for **"${eventName}"** (${factions.map(f => f.name).join(' vs ')}).`, 0x57f287);
-      return;
-    }
 
     if (commandName === 'edit_result') {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);

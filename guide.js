@@ -183,10 +183,6 @@ const CATEGORIES = {
         value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then run `/log_results` to record the awards to the leaderboard.\n\nPick the winners by @mention: `mvp1`, `mvp2` (up to **2 MVPs**), and `hm1`/`hm2`/`hm3`. Optionally add `event_name` for the log. It updates the rankings and medal roles automatically.\n\nThe confirmation posts in the channel and clears itself after a few seconds.',
       },
       {
-        name: '`/post_results` — Host',
-        value: 'Quick alternative that builds the results **embed for you** and logs MVPs/HMs in one step. Up to 2 factions, each with 1 MVP slot and up to 3 HM slots — tag players via Discord\'s @mention selector.\n\n**Options:** `event_name` *(required)*, `faction1_name` *(required)*, `faction1_mvp`, `faction1_hm1/2/3`, `faction2_name`, `faction2_mvp`, `faction2_hm1/2/3`, `summary`. Use `/log_results` instead if you want full control over the post\'s look.',
-      },
-      {
         name: '`/edit_result` — Admin',
         value: 'Edit a previously posted result. The `result_name` box shows a **live list of saved results (most recent first)** as you type — just click the one you want. Every other option is optional: leave the faction options blank to keep the current factions and awards, or fill them in to replace them. The bot **automatically adjusts the leaderboard** and edits the original embed in-place.',
       },
@@ -327,7 +323,7 @@ const CATEGORIES = {
       },
       {
         name: '🏆 Awards & Results',
-        value: '• `/give_mvp` · `/give_hm` — who gave how many to whom, with new totals\n• `/remove_mvp` · `/remove_hm` — same for removals\n• `/post_results` — event name and factions\n• `/edit_result` — which result was edited\n• `/delete_result` · `/reset_results` — deletions with awards revoked',
+        value: '• `/give_mvp` · `/give_hm` — who gave how many to whom, with new totals\n• `/remove_mvp` · `/remove_hm` — same for removals\n• `/log_results` — MVPs/HMs logged\n• `/edit_result` — which result was edited\n• `/delete_result` · `/reset_results` — deletions with awards revoked',
       },
       {
         name: '🗑️ Edits, deletions & resets',
