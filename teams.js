@@ -142,7 +142,7 @@ function setupTeams(client) {
           .setPlaceholder('Choose a faction mapping to remove...')
           .addOptions(options)
       );
-      return interaction.reply({ content: '🗑️ Which team mapping do you want to remove?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which team mapping do you want to remove?', components: [row], ephemeral: true });
     }
 
     if (commandName === 'clear_teams') {
@@ -153,7 +153,7 @@ function setupTeams(client) {
         .setTitle('🗑️ Team Mappings Cleared')
         .setDescription('All faction → team role mappings have been removed.')
         .setColor(0xff4444).setTimestamp();
-      return interaction.reply({ embeds: [embed] });
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
   });
 

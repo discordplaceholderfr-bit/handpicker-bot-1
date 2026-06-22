@@ -558,7 +558,7 @@ function setupHandpicker(client) {
             .setPlaceholder('Choose a faction to remove...')
             .addOptions(options)
         );
-        return interaction.reply({ content: `🗑️ **${game.title}** — which faction do you want to remove?`, components: [row] });
+        return interaction.reply({ content: `🗑️ **${game.title}** — which faction do you want to remove?`, components: [row], ephemeral: true });
       }
 
       const listOptions = guildGames.map(([gameId, game]) => ({
@@ -572,7 +572,7 @@ function setupHandpicker(client) {
           .setPlaceholder('Choose a list...')
           .addOptions(listOptions)
       );
-      return interaction.reply({ content: '🗑️ Which list do you want to remove a faction from?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which list do you want to remove a faction from?', components: [row], ephemeral: true });
     }
 
     if (commandName === 'claim') {
@@ -664,7 +664,7 @@ function setupHandpicker(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder().setCustomId(`remove_player_pick__${interaction.user.id}`).setPlaceholder('Choose a player claim to remove...').addOptions(options.slice(0, 25))
       );
-      return interaction.reply({ content: `🗑️ **${game.title}** — which claim do you want to remove?`, components: [row] });
+      return interaction.reply({ content: `🗑️ **${game.title}** — which claim do you want to remove?`, components: [row], ephemeral: true });
     }
 
     if (commandName === 'blacklist') {
@@ -809,7 +809,7 @@ function setupHandpicker(client) {
         const row = new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder().setCustomId(`remove_nation_pick__${interaction.user.id}`).setPlaceholder('Choose a nation to remove...').addOptions(options)
         );
-        return interaction.reply({ content: `🗑️ **${game.title}** — which nation do you want to remove?`, components: [row] });
+        return interaction.reply({ content: `🗑️ **${game.title}** — which nation do you want to remove?`, components: [row], ephemeral: true });
       }
 
       const listOptions = guildGames.map(([gameId, game]) => ({
@@ -820,7 +820,7 @@ function setupHandpicker(client) {
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder().setCustomId(`remove_nation_list__${interaction.user.id}`).setPlaceholder('Choose a list...').addOptions(listOptions)
       );
-      return interaction.reply({ content: '🗑️ Which list do you want to remove a nation from?', components: [row] });
+      return interaction.reply({ content: '🗑️ Which list do you want to remove a nation from?', components: [row], ephemeral: true });
     }
 
     if (commandName === 'add_preset_players') {
