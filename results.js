@@ -182,7 +182,9 @@ function setupResults(client) {
     if (!isHost(interaction.member)) return denyHost(interaction);
 
     const msg = interaction.targetMessage;
-    const { mvps, hms } = parseAwards(msg?.content || '');
+    // Skip any bot accounts that were @mentioned (the bot itself, Dyno, etc.)
+    const botIds = new Set([...(msg?.mentions?.users?.values() || [])].filter(u => u.bot).map(u => u.id));
+    const { mvps, hms } = parseAwards(msg?.content || '', botIds);
     if (!mvps.length && !hms.length) {
       return interaction.reply({ content: '❌ Couldn\'t find any MVP or HM @mentions in that message.\nMake sure award lines name the winner with an @mention under an "MVP"/"HM" heading.', ephemeral: true });
     }
