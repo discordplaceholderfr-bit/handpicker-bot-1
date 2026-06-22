@@ -4,6 +4,8 @@ const { auditLog } = require('./auditlog');
 
 const {
   SlashCommandBuilder,
+  ContextMenuCommandBuilder,
+  ApplicationCommandType,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -44,6 +46,48 @@ function buildResultEmbed(result) {
   if (result.summary) embed.addFields({ name: 'Summary', value: result.summary });
 
   return embed;
+}
+
+// Parse a posted results message into MVP/HM user IDs.
+// A line naming "MVP" / "HM"(/"HMS"/"honorable mention") sets the current award
+// type; the first @mention on that line OR any following lines (until the type
+// changes) is awarded that type. Mentions before any MVP/HM heading (e.g. the
+// summary) are ignored. Each user is counted once per type.
+function parseAwards(content) {
+  const mentionRe = /<@!?(\d+)>/;
+  const mvp = new Set(), hm = new Set();
+  let mode = null;
+  for (const line of (content || '').split('\n')) {
+    const lower = line.toLowerCase();
+    if (/\bmvp\b/.test(lower)) mode = 'mvp';
+    else if (/\bhms?\b/.test(lower) || lower.includes('honorable mention')) mode = 'hm';
+    const m = line.match(mentionRe);            // first mention on the line only
+    if (m && mode) (mode === 'mvp' ? mvp : hm).add(m[1]);
+  }
+  return { mvps: [...mvp], hms: [...hm] };
+}
+
+// Award + save a logged result record (used by /log_results and the context menu).
+function logResults(interaction, { mvps, hms, eventName, sourceUrl }) {
+  const guildId = interaction.guildId;
+  if (!allResults[guildId]) allResults[guildId] = {};
+  const resultId = `result_${guildId}_${Date.now()}`;
+  allResults[guildId][resultId] = {
+    eventName:    eventName || 'Logged results',
+    summary:      '',
+    factions:     [{ name: 'Results', mvps: [...mvps], hms: [...hms] }],
+    createdAt:    Date.now(),
+    postedById:   interaction.user.id,
+    postedByName: interaction.user.username,
+    sourceUrl:    sourceUrl || null,
+  };
+  saveResults(allResults);
+  const medalUsers = new Set();
+  for (const id of mvps) { awardMVP(guildId, id, null, 1); medalUsers.add(id); }
+  for (const id of hms)  awardHM(guildId, id, null, 1);
+  refreshRankingsMessage(guildId).catch(() => {});
+  for (const id of medalUsers) syncMedalRoles(interaction.guild, id).catch(() => {});
+  return resultId;
 }
 
 // Read faction options from an interaction (i=1 or 2)
@@ -96,6 +140,12 @@ const resultsCommands = [
     .addStringOption(o => o.setName('event_name').setDescription('Event name (optional, for the log)'))
     .toJSON(),
 
+  // Right-click a results message → Apps → "Log Results (read message)"
+  new ContextMenuCommandBuilder()
+    .setName('Log Results (read message)')
+    .setType(ApplicationCommandType.Message)
+    .toJSON(),
+
   new SlashCommandBuilder()
     .setName('list_results')
     .setDescription('Show all saved event results for this server')
@@ -130,6 +180,29 @@ function setupResults(client) {
         value: id,
       })));
     } catch { /* autocomplete timed out */ }
+  });
+
+  // ── Context menu: read a posted results message and auto-award ──────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isMessageContextMenuCommand()) return;
+    if (interaction.commandName !== 'Log Results (read message)') return;
+    if (!isHost(interaction.member)) return denyHost(interaction);
+
+    const msg = interaction.targetMessage;
+    const { mvps, hms } = parseAwards(msg?.content || '');
+    if (!mvps.length && !hms.length) {
+      return interaction.reply({ content: '❌ Couldn\'t find any MVP or HM @mentions in that message.\nMake sure award lines name the winner with an @mention under an "MVP"/"HM" heading.', ephemeral: true });
+    }
+
+    logResults(interaction, { mvps, hms, eventName: null, sourceUrl: msg.url });
+
+    const parts = [];
+    if (mvps.length) parts.push(`**${mvps.length} MVP${mvps.length > 1 ? 's' : ''}** — ${mvps.map(id => `<@${id}>`).join(', ')}`);
+    if (hms.length)  parts.push(`**${hms.length} HM${hms.length > 1 ? 's' : ''}** — ${hms.map(id => `<@${id}>`).join(', ')}`);
+    auditLog('🏁 Results Logged', `<@${interaction.user.id}> logged ${parts.join(' · ')} from a [message](${msg.url}).`, 0x57f287);
+
+    // Non-ephemeral confirmation (auto-deleted after 12s by index.js)
+    return interaction.reply({ content: `✅ Read [that message](${msg.url}) and logged:\n${parts.join('\n')}\n\nRankings and medal roles updated. *(Use \`/remove_mvp\`/\`/remove_hm\` if it picked up someone by mistake.)*` });
   });
 
   // ── Slash commands ──────────────────────────────────────────────────────────
@@ -222,11 +295,7 @@ function setupResults(client) {
       }
       const eventName = interaction.options.getString('event_name');
 
-      const medalUsers = new Set();
-      for (const u of mvps) { awardMVP(guildId, u.id, u.username, 1); medalUsers.add(u.id); }
-      for (const u of hms)  awardHM(guildId, u.id, u.username, 1);
-      refreshRankingsMessage(guildId).catch(() => {});
-      for (const uid of medalUsers) syncMedalRoles(interaction.guild, uid).catch(() => {});
+      logResults(interaction, { mvps: mvps.map(u => u.id), hms: hms.map(u => u.id), eventName, sourceUrl: null });
 
       const parts = [];
       if (mvps.length) parts.push(`**${mvps.length} MVP${mvps.length > 1 ? 's' : ''}** — ${mvps.map(u => `<@${u.id}>`).join(', ')}`);

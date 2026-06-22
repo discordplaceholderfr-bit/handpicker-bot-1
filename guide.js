@@ -179,16 +179,12 @@ const CATEGORIES = {
         value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player\n\nThe rankings embed auto-updates whenever an MVP or HM is given, removed, or results are posted.',
       },
       {
-        name: '`/log_results` — Host',
-        value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then run `/log_results` to record the awards to the leaderboard.\n\nPick the winners by @mention: `mvp1`, `mvp2` (up to **2 MVPs**), and `hm1`/`hm2`/`hm3`. Optionally add `event_name` for the log. It updates the rankings and medal roles automatically.\n\nThe confirmation posts in the channel and clears itself after a few seconds.',
+        name: 'Logging results — Host',
+        value: '**Write your results post however you want** — headers, a writeup per award, as many videos/images as you like — then log the awards to the leaderboard one of two ways:\n\n**📖 Read the message (easiest):** right-click your results message → **Apps → "Log Results (read message)"**. The bot reads it and auto-awards anyone @mentioned under an **MVP** or **HM** heading — first @mention per line, names before the first heading (your summary) are ignored.\n\n**✍️ By hand:** `/log_results` and pick the winners by @mention — `mvp1`, `mvp2` (up to **2 MVPs**) and `hm1`/`hm2`/`hm3`, plus optional `event_name`.\n\nEither way it updates the rankings and medal roles, saves a result record (manageable below), and the confirmation clears itself after a few seconds. If the reader grabs someone by mistake, fix it with `/remove_mvp` / `/remove_hm`.',
       },
       {
-        name: '`/edit_result` — Admin',
-        value: 'Edit a previously posted result. The `result_name` box shows a **live list of saved results (most recent first)** as you type — just click the one you want. Every other option is optional: leave the faction options blank to keep the current factions and awards, or fill them in to replace them. The bot **automatically adjusts the leaderboard** and edits the original embed in-place.',
-      },
-      {
-        name: '`/list_results`',
-        value: 'Show all saved event results for this server — event name, date, and faction names for each.',
+        name: '`/list_results` · `/edit_result` · `/delete_result` · `/reset_results`',
+        value: 'Manage logged results.\n• `/list_results` — every logged result with date and awards\n• `/edit_result` *(Admin)* — pick a result (live autocomplete) and re-enter awards; the leaderboard adjusts automatically\n• `/delete_result` *(Admin)* — delete one result and **revoke its awards**\n• `/reset_results` *(Admin)* — wipe all results and revoke their awards',
       },
       {
         name: '🎖️ MVP medal roles',
