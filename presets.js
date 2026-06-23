@@ -49,49 +49,38 @@ function presetOptions(guildId) {
   }));
 }
 
-// Paged /list_presets payload. Pages the text list AND scopes the preview
-// dropdown to the current page's presets (a select menu maxes out at 25 options,
-// so listing every preset would break once there are more than 25). `userId` is
-// the lister, embedded so the preview dropdown stays restricted to them.
-function buildPresetsListPayload(guildId, userId, page = 0) {
+// Paged /list_presets payload → { embeds, components } or null if none. Each
+// preset block shows its name/title and lists every faction's countries beneath
+// it. No preview dropdown — just ◀ Prev / Next ▶ paging, sized so a page never
+// exceeds Discord's embed limit even when countries are listed in full.
+function buildPresetsListPayload(guildId, page = 0) {
   const entries = Object.entries(presets[guildId] || {});
   if (!entries.length) return null;
 
+  const emojis = ['🔴', '🔵', '🟢', '🟡', '🟠', '🟣'];
   const blocks = entries.map(([pName, p]) => {
-    const factionNames = Object.keys(p.factions).join(', ');
-    const countryCount = Object.values(p.factions).reduce((s, f) => s + f.countries.length, 0);
-    const savedDate    = new Date(p.savedAt).toLocaleDateString();
-    return `**"${pName}"** — *${p.title}*\n┗ ${factionNames} · ${countryCount} countries · saved ${savedDate}`;
+    const total = Object.values(p.factions).reduce((s, f) => s + f.countries.length, 0);
+    const factionLines = Object.entries(p.factions).map(([fName, f], i) => {
+      // Major countries are stored with a leading * — show them as 🔸 like the list embed
+      const list = (f.countries || []).map(c => (c.startsWith('*') ? `🔸${c.slice(1)}` : c)).join(', ');
+      return `${emojis[i % emojis.length]} **${fName}**: ${list || '*none*'}`;
+    }).join('\n');
+    let block = `**"${pName}"** — *${p.title}* · ${total} countries\n${factionLines}`;
+    if (block.length > 1800) block = block.slice(0, 1799) + '…'; // keep any single preset within a page
+    return block;
   });
 
-  const pages = paginate(blocks, { maxChars: 3600, maxPer: 20 }); // ≤20 keeps the dropdown under 25 options
+  const pages = paginate(blocks, { maxChars: 3800, maxPer: 6 });
   page = Math.max(0, Math.min(page, pages.length - 1));
 
   const embed = new EmbedBuilder()
     .setTitle(`💾 Saved Presets (${entries.length})`)
     .setDescription(pages[page].join('\n\n'))
     .setColor(0x5865f2)
-    .setFooter({ text: `Page ${page + 1}/${pages.length} · pick below to preview a preset on this page` });
+    .setFooter({ text: `Page ${page + 1}/${pages.length}` });
 
-  // Entries shown on this page (blocks map 1:1 to entries, in order)
-  const start = pages.slice(0, page).reduce((s, pg) => s + pg.length, 0);
-  const pageEntries = entries.slice(start, start + pages[page].length);
-
-  const components = [
-    new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId(`preview_preset_pick__${userId}`)
-        .setPlaceholder('Preview a preset on this page...')
-        .addOptions(pageEntries.map(([n, p]) => ({
-          label:       n.slice(0, 100),
-          description: `${p.title} · ${Object.values(p.factions).reduce((s, f) => s + f.countries.length, 0)} countries`.slice(0, 100),
-          value:       n,
-        })))
-    ),
-  ];
-  const nav = pageButtons(`presetspage__${userId}`, page, pages.length);
-  if (nav) components.push(nav);
-  return { embeds: [embed], components };
+  const nav = pageButtons('presetspage', page, pages.length);
+  return { embeds: [embed], components: nav ? [nav] : [] };
 }
 
 function gameOptions(guildId) {
@@ -174,10 +163,8 @@ function setupPresets(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('presetspage__')) return;
-    const parts   = interaction.customId.split('__'); // ['presetspage', userId, page]
-    const userId  = parts[1];
-    const page    = parseInt(parts[2]) || 0;
-    const payload = buildPresetsListPayload(interaction.guildId, userId, page);
+    const page    = parseInt(interaction.customId.split('__')[1]) || 0;
+    const payload = buildPresetsListPayload(interaction.guildId, page);
     if (!payload) return interaction.update({ content: '❌ No presets saved.', embeds: [], components: [] });
     return interaction.update(payload);
   });
@@ -239,7 +226,7 @@ function setupPresets(client) {
 
     // ── /list_presets — dropdown to preview each ──────────────────────────────
     if (commandName === 'list_presets') {
-      const payload = buildPresetsListPayload(guildId, interaction.user.id, 0);
+      const payload = buildPresetsListPayload(guildId, 0);
       if (!payload) return interaction.reply({ content: '❌ No presets saved yet.', ephemeral: true });
       return interaction.reply(payload);
     }

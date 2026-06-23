@@ -115,7 +115,7 @@ const CATEGORIES = {
       },
       {
         name: '`/list_presets` · `/preview_preset`',
-        value: '`/list_presets` — Shows all saved presets with factions, country count, and save date. Includes a dropdown to preview any one inline.\n\n`/preview_preset` — Pick a preset from a dropdown to see all its factions and countries before you commit to loading it.',
+        value: '`/list_presets` — Lists every saved preset with each faction\'s countries shown in full underneath the preset name (Majors marked 🔸). Split into ◀ Prev / Next ▶ pages when long.\n\n`/preview_preset` — Pick a single preset from a dropdown to see all its factions and countries before you commit to loading it.',
       },
     ],
   },
