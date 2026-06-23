@@ -1,6 +1,6 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { auditLog } = require('./auditlog');
-const { getBlacklist, addBlacklist, removeBlacklist } = require('./blacklist');
+const { getBlacklist, addBlacklist, removeBlacklist, listBlacklist } = require('./blacklist');
 
 const {
   ActionRowBuilder,
@@ -395,6 +395,11 @@ const handpickerCommands = [
     .toJSON(),
 
   new SlashCommandBuilder()
+    .setName('blacklists')
+    .setDescription('Host/Admin: Show all blacklisted players, why, and until when')
+    .toJSON(),
+
+  new SlashCommandBuilder()
     .setName('list')
     .setDescription('Show the current handpick list')
     .toJSON(),
@@ -719,6 +724,41 @@ function setupHandpicker(client) {
       } catch { /* DMs closed */ }
 
       return interaction.reply({ content: `✅ <@${target.id}> has been removed from the blacklist.` });
+    }
+
+    if (commandName === 'blacklists') {
+      if (!isHost(interaction.member)) return denyHost(interaction);
+      const entries = listBlacklist(guildId);
+      if (entries.length === 0)
+        return interaction.reply({ content: '✅ No players are currently blacklisted.', ephemeral: true });
+
+      // Soonest to expire first
+      entries.sort((a, b) => (a[1].expiresAt ?? Infinity) - (b[1].expiresAt ?? Infinity));
+
+      let desc = '', shown = 0;
+      for (const [userId, e] of entries) {
+        const expires = e.expiresAt
+          ? `<t:${Math.floor(e.expiresAt / 1000)}:R> (<t:${Math.floor(e.expiresAt / 1000)}:f>)`
+          : 'Never (permanent)';
+        const by   = e.bannedBy ? `<@${e.bannedBy}>` : 'Unknown';
+        const line = `🚫 <@${userId}>\n┗ ⏰ Expires: ${expires}\n┗ 🛡️ By: ${by}\n┗ 📋 Reason: ${e.reason ?? 'No reason given'}\n\n`;
+        if (desc.length + line.length > 4000) break; // stay under the embed description cap
+        desc += line;
+        shown++;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🚫 Blacklisted Players')
+        .setColor(0xff4444)
+        .setDescription(desc.trim())
+        .setTimestamp();
+      embed.setFooter({ text: shown < entries.length
+        ? `Showing ${shown} of ${entries.length} — too many to display the rest`
+        : `${entries.length} player(s) currently blacklisted`
+      });
+
+      // Ephemeral so the roster isn't auto-deleted after a few seconds and stays private to staff
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     if (commandName === 'list') {

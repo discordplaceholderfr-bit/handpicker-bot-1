@@ -46,4 +46,23 @@ function removeBlacklist(guildId, userId) {
   return true;
 }
 
-module.exports = { getBlacklist, isBlacklisted, addBlacklist, removeBlacklist };
+// Returns all ACTIVE blacklist entries for a guild as [userId, entry] pairs,
+// auto-clearing any that have expired. Used by the /blacklists roster command.
+function listBlacklist(guildId) {
+  const g = blacklist[guildId];
+  if (!g) return [];
+  let changed = false;
+  const out = [];
+  for (const [userId, entry] of Object.entries(g)) {
+    if (entry.expiresAt && Date.now() > entry.expiresAt) {
+      delete g[userId];
+      changed = true;
+      continue;
+    }
+    out.push([userId, entry]);
+  }
+  if (changed) saveBlacklist(blacklist);
+  return out;
+}
+
+module.exports = { getBlacklist, isBlacklisted, addBlacklist, removeBlacklist, listBlacklist };

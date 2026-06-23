@@ -132,6 +132,10 @@ const CATEGORIES = {
         name: '`/unblacklist` — Admin',
         value: 'Lift a blacklist early — they can claim again immediately. The player is DMed that the blacklist was lifted.\n\n**Example:** `/unblacklist user:@Player`',
       },
+      {
+        name: '`/blacklists` — Host',
+        value: 'Show every currently blacklisted player at a glance — who they are, the reason, who blacklisted them, and when each blacklist expires (sorted soonest-first). Read-only and private to you; expired entries are cleared automatically. Use `/blacklist` and `/unblacklist` to actually change them.',
+      },
     ],
   },
 
