@@ -19,6 +19,10 @@ const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const LB_FILE     = path.join(DATA_DIR, 'leaderboard.json');
 const RANKPIN_FILE = path.join(DATA_DIR, 'rankings_pin.json');
 
+// The single live, auto-updating leaderboard always lives (and stays pinned) in
+// this channel, regardless of where /rankings is run.
+const RANKINGS_CHANNEL_ID = '1487616503250423961';
+
 function loadLB() {
   try { return fs.existsSync(LB_FILE) ? JSON.parse(fs.readFileSync(LB_FILE, 'utf8')) : {}; }
   catch { return {}; }
@@ -176,16 +180,29 @@ function buildRankingsPayload(guildId, page = 0) {
 // ─── Auto-refresh pinned rankings message ─────────────────────────────────────
 async function refreshRankingsMessage(guildId) {
   if (!_client) return;
-  const pin = pins[guildId];
-  if (!pin) return;
   try {
-    const ch  = await _client.channels.fetch(pin.channelId);
-    const msg = await ch.messages.fetch(pin.messageId);
-    await msg.edit(buildRankingsPayload(guildId, 0));
-  } catch {
-    // Message was deleted — clear the pin so we don't keep trying
-    delete pins[guildId];
-    savePins(pins);
+    const channel = await _client.channels.fetch(RANKINGS_CHANNEL_ID).catch(() => null);
+    if (!channel) return;
+
+    // Reuse the tracked message only if it's the one in the fixed channel
+    const pin = pins[guildId];
+    let msg = (pin?.channelId === RANKINGS_CHANNEL_ID && pin.messageId)
+      ? await channel.messages.fetch(pin.messageId).catch(() => null)
+      : null;
+
+    const payload = buildRankingsPayload(guildId, 0);
+    if (msg) {
+      await msg.edit(payload);
+    } else {
+      // First run, deleted, or previously pinned elsewhere — post a fresh live
+      // message in the fixed channel and pin it.
+      msg = await channel.send(payload);
+      pins[guildId] = { channelId: RANKINGS_CHANNEL_ID, messageId: msg.id };
+      savePins(pins);
+      try { await msg.pin(); } catch { /* bot lacks Manage Messages — leave unpinned */ }
+    }
+  } catch (e) {
+    console.warn('refreshRankingsMessage failed:', e.message);
   }
 }
 
@@ -322,10 +339,13 @@ function setupLeaderboard(client) {
     }
 
     if (commandName === 'rankings') {
-      await interaction.reply(buildRankingsPayload(guildId, 0));
-      const msg = await interaction.fetchReply();
-      pins[guildId] = { channelId: msg.channelId, messageId: msg.id };
-      savePins(pins);
+      // Ack immediately, then (re)post/refresh the single pinned live leaderboard
+      // in the fixed channel so the auto-updating copy always lives there.
+      await interaction.reply({
+        content: `📌 The live leaderboard is pinned in <#${RANKINGS_CHANNEL_ID}> and updates automatically whenever awards change.`,
+        ephemeral: true,
+      });
+      refreshRankingsMessage(guildId).catch(() => {});
       return;
     }
 

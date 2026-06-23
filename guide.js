@@ -153,7 +153,7 @@ const CATEGORIES = {
       },
       {
         name: '`/rankings`',
-        value: 'Posts the full server leaderboard ranked by score. Tied players share the same rank number. Includes a **Server Statistics** panel at the top:\n• Total players with at least one award\n• Total MVPs and HMs ever given\n• Average score across all ranked players\n• Current #1 player\n\nThe rankings embed auto-updates whenever an MVP or HM is given, removed, or results are posted.',
+        value: 'Maintains a single **live leaderboard** that stays **pinned in the dedicated rankings channel** and **auto-updates** whenever an MVP or HM is given, removed, or results are posted. Running `/rankings` (re)posts/refreshes that pinned message and replies privately with a link to it. Players are ranked by score with tied players sharing a rank, and it includes a **Server Statistics** panel (total players, total MVPs/HMs, average score, current #1). Long leaderboards are split into ◀ Prev / Next ▶ pages.',
       },
       {
         name: 'Logging results — Host',
