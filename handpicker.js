@@ -1127,6 +1127,9 @@ function setupHandpicker(client) {
       const isPending = withoutPrefix.slice(lastDunder + 2) === 'pending';
       const game = isPending ? pendingGames[gameId]?.game : games[gameId];
       if (!game) return interaction.editReply('❌ List no longer exists.');
+      // Defense in depth: the modal is only opened from Host-gated paths, but
+      // re-verify on submit so the assignment itself can never run for a non-Host.
+      if (!isHost(interaction.member)) return interaction.editReply('❌ Only a Host can set preset players.');
       const raw   = interaction.fields.getTextInputValue('preset_players_text');
       const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
       const assigned = [], failed = [];
@@ -1363,6 +1366,9 @@ function setupHandpicker(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
     if (interaction.customId.startsWith('skip_preset_players__')) {
+      // This button lives on the PUBLIC create/load reply — gate it to Hosts so a
+      // random member can't drive someone else's list setup.
+      if (!isHost(interaction.member)) return denyHost(interaction);
       const gameId = interaction.customId.split('__')[1];
       await interaction.update({ content: '✅ Skipped — players can claim using the dropdowns.', components: [] });
       await postPendingGame(interaction, gameId);
@@ -1372,6 +1378,9 @@ function setupHandpicker(client) {
       return interaction.update({ content: '✅ Skipped — players can claim using the dropdowns.', components: [] });
     }
     if (interaction.customId.startsWith('open_preset_players__')) {
+      // Public button → Hosts only. Without this, any member could open the
+      // preset-players modal and assign players, bypassing major-role/blacklist.
+      if (!isHost(interaction.member)) return denyHost(interaction);
       const gameId = interaction.customId.split('__')[1];
       const isPending = !!pendingGames[gameId];
       const modal = new ModalBuilder().setCustomId(`preset_players_modal__${gameId}__${isPending ? 'pending' : 'live'}`).setTitle('Add Preset Players');
