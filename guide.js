@@ -18,19 +18,15 @@ const CATEGORIES = {
       },
       {
         name: '✏️ Editing',
-        value: 'Change a live list without recreating it — drop a country or a whole faction, edit a saved preset, or delay a schedule.',
+        value: 'Change a live list without recreating it — drop a country or a whole faction, or edit a saved preset.',
       },
       {
         name: '💾 Presets',
         value: 'Save a list once and redeploy it any time. Presets can be previewed, edited, renamed, and deleted, and they survive bot restarts.',
       },
       {
-        name: '📊 Schedule',
-        value: 'Hands-free event setup — the bot posts a reaction embed, counts votes, and automatically fires a preset list once enough players react. Schedules can be delayed, listed, and removed.',
-      },
-      {
         name: '🚫 Restrictions',
-        value: 'Keep the vote count and claims clean — blacklist a player to both drop their ✅ votes from every schedule and block them from claiming in any list, then unblacklist to restore them.',
+        value: 'Keep claiming clean — blacklist a player to block them from claiming in any list, then unblacklist to restore them.',
       },
       {
         name: '🏆 Awards',
@@ -46,7 +42,7 @@ const CATEGORIES = {
       },
       {
         name: '🗑️ Deletions',
-        value: 'Every delete and reset command in one place — wipe lists, presets, leaderboard entries, team mappings, schedules, and results, individually or all at once.',
+        value: 'Every delete and reset command in one place — wipe lists, presets, leaderboard entries, team mappings, and results, individually or all at once.',
       },
       {
         name: '📦 Extras',
@@ -98,10 +94,6 @@ const CATEGORIES = {
         name: '`/edit_preset` — Host',
         value: 'Edit a saved preset without deploying it — rename the title, add or remove countries, add or remove factions. Full breakdown in **💾 Presets**.',
       },
-      {
-        name: '`/delay_schedule` — Admin',
-        value: 'Add extra minutes to an active schedule\'s countdown or deadline without recreating it. Full breakdown in **📊 Schedule**.',
-      },
     ],
   },
 
@@ -128,36 +120,17 @@ const CATEGORIES = {
     ],
   },
 
-  watcher: {
-    label: '📊 Schedule',
-    color: 0x57f287,
-    fields: [
-      {
-        name: '`/setup_schedule` — Host',
-        value: 'Posts a reaction embed in the channel. Players react ✅ to vote — when reactions hit the threshold the bot posts the selected preset as a handpick list. The bot reacts ✅ first as a visual cue (its reaction doesn\'t count toward the threshold).\n\n**Required options:**\n• `title` — event name shown in the embed\n• `threshold` — ✅ reactions needed to fire\n• `ping_event` — ping the Event Ping role when the schedule posts and again when the list fires (true/false)\n• `slides` — link to your slides (preview card shown under the embed). Type **`noslides`** instead of a link to skip the preview entirely\n\n**Optional options:**\n• `delay` — wait after threshold before posting, using a minute/second format like `1m 30s`, `45s`, or `2m`. Use `0s` to post **instantly**. A bare number means minutes (e.g. `5` = 5m). *(default: 30s)*\n• `post_channel` — channel to post the list in *(default: this channel)*\n• `expire_in` — minutes before the schedule auto-removes if threshold not reached *(default: 30)*\n• `list_expiry` — minutes before the posted list locks for new claims *(default: 15)*\n• `preset_players` — pre-assign players in `Nation: UserID; Nation: UserID` format\n\n**Example:**\n`/setup_schedule title:Siege of Vienna threshold:20 ping_event:true slides:noslides delay:1m 30s`',
-      },
-      {
-        name: '`/delay_schedule` — Admin',
-        value: 'Add extra minutes to an active schedule\'s countdown or deadline without having to delete and recreate it.\n\n**Use case:** The game gets delayed 30 minutes — run `/delay_schedule`, pick the schedule, enter `30` to push its deadline back.',
-      },
-      {
-        name: '`/list_schedules` — Admin',
-        value: 'Show all active schedules in this server. Displays each schedule\'s preset name, vote threshold, current vote count, deadline, and whether it has already fired.',
-      },
-    ],
-  },
-
   restrictions: {
     label: '🚫 Restrictions',
     color: 0xed4245,
     fields: [
       {
         name: '`/blacklist` — Admin',
-        value: 'Blacklist a player for a set duration. While blacklisted, **two things happen automatically across the whole server** until they\'re unblacklisted (or the duration expires):\n• Their ✅ reactions **don\'t count** toward any schedule\'s threshold\n• They **can\'t claim** countries in any handpick list\n\nThe player is **DMed** with the reason and exactly when the blacklist expires.\n\n**Options:**\n• `user` — the player to blacklist\n• `duration` — how long: `1d`, `2h 30m`, `30m`, etc.\n• `reason` — shown in the DM and on every failed claim attempt\n\n**Example:** `/blacklist user:@Player duration:2d reason:No-show at scheduled game`',
+        value: 'Blacklist a player for a set duration. While blacklisted, they **can\'t claim** countries in any handpick list across the whole server, until they\'re unblacklisted (or the duration expires).\n\nThe player is **DMed** with the reason and exactly when the blacklist expires.\n\n**Options:**\n• `user` — the player to blacklist\n• `duration` — how long: `1d`, `2h 30m`, `30m`, etc.\n• `reason` — shown in the DM and on every failed claim attempt\n\n**Example:** `/blacklist user:@Player duration:2d reason:No-show at scheduled game`',
       },
       {
         name: '`/unblacklist` — Admin',
-        value: 'Lift a blacklist early — their votes count and they can claim again immediately. The player is DMed that the blacklist was lifted.\n\n**Example:** `/unblacklist user:@Player`',
+        value: 'Lift a blacklist early — they can claim again immediately. The player is DMed that the blacklist was lifted.\n\n**Example:** `/unblacklist user:@Player`',
       },
     ],
   },
@@ -268,10 +241,6 @@ const CATEGORIES = {
         value: '`/delete_player` — remove one player (wipes their MVPs and HMs)\n`/reset_rankings` — wipe the **entire** leaderboard',
       },
       {
-        name: '📊 Schedules',
-        value: '`/remove_schedule` — delete one active schedule\n`/reset_schedule` — delete **all** active schedules',
-      },
-      {
         name: '🏁 Results',
         value: '`/delete_result` — delete one result (revokes its awards)\n`/reset_results` — wipe **all** results (revokes all their awards)',
       },
@@ -323,7 +292,7 @@ const CATEGORIES = {
       },
       {
         name: '🗑️ Edits, deletions & resets',
-        value: '• `/edit_preset` — every change: renames, countries added/removed, factions added/removed\n• `/delete_preset` · `/reset_presets`\n• `/delete_list` · `/reset_list`\n• `/remove_schedule` · `/reset_schedule`\n• `/delete_player` · `/reset_rankings`',
+        value: '• `/edit_preset` — every change: renames, countries added/removed, factions added/removed\n• `/delete_preset` · `/reset_presets`\n• `/delete_list` · `/reset_list`\n• `/delete_player` · `/reset_rankings`',
       },
       {
         name: '⭐ Players',
@@ -341,8 +310,7 @@ const MENU = [
   { key: 'creating',     desc: 'Build & import lists, add factions' },
   { key: 'editing',      desc: 'Change a live list, edit presets' },
   { key: 'presets',      desc: 'Save, load, edit reusable lists' },
-  { key: 'watcher',      desc: 'Reaction-vote schedules that auto-post' },
-  { key: 'restrictions', desc: 'Blacklist players from votes & claims' },
+  { key: 'restrictions', desc: 'Blacklist players from claiming' },
   { key: 'awards',       desc: 'MVPs, HMs, rankings & results' },
   { key: 'players',      desc: 'Claiming, swaps, majors, preset players' },
   { key: 'teams',        desc: 'Automatic team-role assignment' },

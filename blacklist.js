@@ -13,8 +13,8 @@ function saveBlacklist(data) {
   writeJson(BLACKLIST_FILE, data);
 }
 
-// Single shared in-memory copy (Node caches this module, so handpicker.js and
-// pollwatcher.js read/write the exact same object).
+// Single shared in-memory copy (Node caches this module, so every importer
+// reads/writes the exact same object).
 let blacklist = loadBlacklist();
 
 // Returns the active blacklist entry for a user, or null. Auto-clears expired entries.

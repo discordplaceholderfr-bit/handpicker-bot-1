@@ -5,7 +5,6 @@ const { setupLeaderboard, leaderboardCommands } = require('./leaderboard');
 const { setupPresets, presetCommands } = require('./presets');
 const { setupTeams, teamCommands } = require('./teams');
 const { setupImporter, importerCommands } = require('./importer');
-const { setupWatcher, watcherCommands } = require('./pollwatcher');
 const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
 const { initAuditLog } = require('./auditlog');
@@ -45,7 +44,6 @@ client.once('clientReady', async (readyClient) => {
     ...presetCommands,
     ...teamCommands,
     ...importerCommands,
-    ...watcherCommands,
     ...guideCommands,
     ...resultsCommands,
   ];
@@ -173,7 +171,6 @@ setupLeaderboard(client);
 setupPresets(client);
 setupTeams(client);
 setupImporter(client);
-setupWatcher(client);
 setupGuide(client);
 setupResults(client);
 

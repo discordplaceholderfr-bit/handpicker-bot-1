@@ -682,7 +682,7 @@ function setupHandpicker(client) {
         const u = await client.users.fetch(target.id);
         await u.send({ embeds: [new EmbedBuilder()
           .setTitle('🚫 You have been blacklisted')
-          .setDescription(`You have been blacklisted in **${interaction.guild?.name ?? 'the server'}**. While blacklisted, your ✅ votes don't count toward schedules and you can't claim countries in any handpick list.`)
+          .setDescription(`You have been blacklisted in **${interaction.guild?.name ?? 'the server'}**. While blacklisted, you can't claim countries in any handpick list.`)
           .addFields(
             { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt/1000)}:F> (<t:${Math.floor(expiresAt/1000)}:R>)` },
             { name: '📋 Reason',  value: reason },
@@ -713,7 +713,7 @@ function setupHandpicker(client) {
         const u = await client.users.fetch(target.id);
         await u.send({ embeds: [new EmbedBuilder()
           .setTitle('✅ You have been unblacklisted')
-          .setDescription(`Your blacklist in **${interaction.guild?.name ?? 'the server'}** has been lifted. You can vote and claim countries again.`)
+          .setDescription(`Your blacklist in **${interaction.guild?.name ?? 'the server'}** has been lifted. You can claim countries again.`)
           .setColor(0x57f287).setTimestamp()
         ]});
       } catch { /* DMs closed */ }
