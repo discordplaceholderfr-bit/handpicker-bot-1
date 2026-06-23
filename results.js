@@ -289,10 +289,18 @@ function setupResults(client) {
         const factions = r.factions.map(f => f.name).join(', ');
         return `**${r.eventName}** — ${date}\n${factions} · \`ID: ${id.slice(-6)}\``;
       });
+      // Cap the description so a long history can't exceed Discord's 4096 limit
+      let desc = '', shown = 0;
+      for (const line of lines) {
+        if (desc.length + line.length + 2 > 4000) break;
+        desc += (desc ? '\n\n' : '') + line;
+        shown++;
+      }
+      if (shown < lines.length) desc += `\n\n-# …and ${lines.length - shown} more not shown.`;
       const embed = new EmbedBuilder()
         .setTitle('📋 Event Results')
         .setColor(0x57f287)
-        .setDescription(lines.join('\n\n'));
+        .setDescription(desc);
       return interaction.reply({ embeds: [embed] });
     }
 

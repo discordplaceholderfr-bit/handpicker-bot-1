@@ -160,7 +160,12 @@ function buildRankingsEmbed(guildId) {
   }
   if (current) chunks.push(current);
 
-  // Build embed — stats in description, player chunks as fields
+  // Build embed — stats in the description, player chunks as fields. Each chunk
+  // is already ≤1000 chars (under the 1024 field limit); using fields instead of
+  // one giant description keeps us under Discord's caps. We also stop adding
+  // fields before the whole embed would exceed Discord's 6000-char total, since
+  // overflowing makes the embed invalid — which would make the pinned-rankings
+  // edit throw and silently drop the auto-refresh pin.
   const statsBlock = [
     `👥 Players: ${totalPlayers}`,
     `⭐ Total MVP: ${totalMVP}`,
@@ -169,14 +174,25 @@ function buildRankingsEmbed(guildId) {
     `👑 Top Player: <@${topPlayer.uid}>`,
   ].join('\n');
 
-  // Discord description limit is 4096 chars — join all chunks there
-  const fullList = chunks.join('');
-
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle('🏆 Server Rankings')
-    .setDescription(`Ranked by score *(1 MVP = 2 HM points)*\n\n**📊 Server Statistics**\n${statsBlock}\n\n**🏅 Rankings**\n${fullList}`)
+    .setDescription(`Ranked by score *(1 MVP = 2 HM points)*\n\n**📊 Server Statistics**\n${statsBlock}`)
     .setFooter({ text: `${totalPlayers} player(s) with awards` })
     .setColor(0xf0c040);
+
+  let used = statsBlock.length + 120; // headroom for title/description/footer text
+  let shown = 0;
+  for (const chunk of chunks) {
+    if (shown >= 24 || used + chunk.length > 5800) break; // stay under 25 fields / 6000 chars
+    embed.addFields({ name: shown === 0 ? '🏅 Rankings' : '​', value: chunk });
+    used += chunk.length;
+    shown++;
+  }
+  if (shown < chunks.length) {
+    embed.addFields({ name: '​', value: '-# …more players not shown — leaderboard too long to display in full.' });
+  }
+
+  return embed;
 }
 
 // ─── Auto-refresh pinned rankings message ─────────────────────────────────────
