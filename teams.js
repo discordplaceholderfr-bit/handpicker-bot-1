@@ -11,6 +11,7 @@ const {
 const fs   = require('fs');
 const path = require('path');
 const { writeJson } = require('./jsonstore');
+const { paginate, pageButtons } = require('./pagination');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const TEAMS_FILE = path.join(DATA_DIR, 'teams.json');
@@ -31,6 +32,23 @@ function loadGames() {
 let teams = loadTeams();
 
 function _reloadTeams() { teams = loadTeams(); }
+
+// Paged /list_teams payload → { embeds, components } or null if none.
+function buildTeamsListPayload(guildId, page = 0) {
+  const entries = Object.entries(teams[guildId] || {});
+  if (!entries.length) return null;
+  const blocks = entries.map(([faction, mapping]) =>
+    `**${faction}** → ${mapping.roleId ? `<@&${mapping.roleId}>` : '*no role*'}`);
+  const pages = paginate(blocks, { maxChars: 3800, maxPer: 15 });
+  page = Math.max(0, Math.min(page, pages.length - 1));
+  const embed = new EmbedBuilder()
+    .setTitle('🎖️ Faction → Team Mappings')
+    .setDescription(pages[page].join('\n'))
+    .setColor(0x5865f2)
+    .setFooter({ text: `Page ${page + 1}/${pages.length} · ${entries.length} mapping(s) · roles control channel access` });
+  const nav = pageButtons('teampage', page, pages.length);
+  return { embeds: [embed], components: nav ? [nav] : [] };
+}
 
 async function assignTeam(guild, userId, factionName) {
   const mapping = teams[guild.id]?.[factionName];
@@ -108,22 +126,9 @@ function setupTeams(client) {
     }
 
     if (commandName === 'list_teams') {
-      const guildTeams = teams[guildId] || {};
-      const entries    = Object.entries(guildTeams);
-      if (entries.length === 0) {
-        return interaction.reply({ content: '❌ No team mappings set up yet. Use `/setup_team`.' });
-      }
-      let desc = '';
-      for (const [faction, mapping] of entries) {
-        const role = mapping.roleId ? `<@&${mapping.roleId}>` : '*no role*';
-        desc += `**${faction}** → ${role}\n`;
-      }
-      const embed = new EmbedBuilder()
-        .setTitle('🎖️ Faction → Team Mappings')
-        .setDescription(desc)
-        .setColor(0x5865f2)
-        .setFooter({ text: 'Roles already control channel access via Discord permissions' });
-      return interaction.reply({ embeds: [embed] });
+      const payload = buildTeamsListPayload(guildId, 0);
+      if (!payload) return interaction.reply({ content: '❌ No team mappings set up yet. Use `/setup_team`.' });
+      return interaction.reply(payload);
     }
 
     if (commandName === 'remove_team') {
@@ -171,6 +176,16 @@ function setupTeams(client) {
     delete teams[guildId][factionName];
     saveTeams(teams);
     return interaction.update({ content: `✅ Team mapping for **"${factionName}"** removed.`, components: [] });
+  });
+
+  // ── Buttons: /list_teams pagination (◀ Prev / Next ▶) ────────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith('teampage__')) return;
+    const page    = parseInt(interaction.customId.split('__')[1]) || 0;
+    const payload = buildTeamsListPayload(interaction.guildId, page);
+    if (!payload) return interaction.update({ content: '❌ No team mappings set up.', embeds: [], components: [] });
+    return interaction.update(payload);
   });
 }
 

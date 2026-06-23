@@ -1,6 +1,7 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { awardMVP, awardHM, removeMVP, removeHM, refreshRankingsMessage, syncMedalRoles } = require('./leaderboard');
 const { auditLog } = require('./auditlog');
+const { paginate, pageButtons } = require('./pagination');
 
 const {
   SlashCommandBuilder,
@@ -46,6 +47,26 @@ function buildResultEmbed(result) {
   if (result.summary) embed.addFields({ name: 'Summary', value: result.summary });
 
   return embed;
+}
+
+// Paged /list_results payload → { embeds, components } or null if none.
+function buildResultsListPayload(guildId, page = 0) {
+  const entries = Object.entries(allResults[guildId] || {});
+  if (!entries.length) return null;
+  const blocks = entries.map(([id, r]) => {
+    const date     = new Date(r.createdAt).toLocaleDateString();
+    const factions = (r.factions || []).map(f => f.name).join(', ');
+    return `**${r.eventName}** — ${date}\n${factions} · \`ID: ${id.slice(-6)}\``;
+  });
+  const pages = paginate(blocks, { maxChars: 3800, maxPer: 12 });
+  page = Math.max(0, Math.min(page, pages.length - 1));
+  const embed = new EmbedBuilder()
+    .setTitle('📋 Event Results')
+    .setColor(0x57f287)
+    .setDescription(pages[page].join('\n\n'))
+    .setFooter({ text: `Page ${page + 1}/${pages.length} · ${entries.length} result(s)` });
+  const nav = pageButtons('respage', page, pages.length);
+  return { embeds: [embed], components: nav ? [nav] : [] };
 }
 
 // Parse a posted results message into MVP/HM user IDs.
@@ -282,26 +303,9 @@ function setupResults(client) {
     }
 
     if (commandName === 'list_results') {
-      const entries = Object.entries(allResults[guildId] || {});
-      if (!entries.length) return interaction.reply({ content: '❌ No event results saved for this server.', ephemeral: true });
-      const lines = entries.map(([id, r]) => {
-        const date     = new Date(r.createdAt).toLocaleDateString();
-        const factions = r.factions.map(f => f.name).join(', ');
-        return `**${r.eventName}** — ${date}\n${factions} · \`ID: ${id.slice(-6)}\``;
-      });
-      // Cap the description so a long history can't exceed Discord's 4096 limit
-      let desc = '', shown = 0;
-      for (const line of lines) {
-        if (desc.length + line.length + 2 > 4000) break;
-        desc += (desc ? '\n\n' : '') + line;
-        shown++;
-      }
-      if (shown < lines.length) desc += `\n\n-# …and ${lines.length - shown} more not shown.`;
-      const embed = new EmbedBuilder()
-        .setTitle('📋 Event Results')
-        .setColor(0x57f287)
-        .setDescription(desc);
-      return interaction.reply({ embeds: [embed] });
+      const payload = buildResultsListPayload(guildId, 0);
+      if (!payload) return interaction.reply({ content: '❌ No event results saved for this server.', ephemeral: true });
+      return interaction.reply(payload);
     }
 
     if (commandName === 'delete_result') {
@@ -405,6 +409,16 @@ function setupResults(client) {
       auditLog('🗑️ All Results Wiped', `<@${interaction.user.id}> wiped all event results (awards revoked).`, 0xff4444);
       return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }
+  });
+
+  // ── Buttons: /list_results pagination (◀ Prev / Next ▶) ──────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith('respage__')) return;
+    const page    = parseInt(interaction.customId.split('__')[1]) || 0;
+    const payload = buildResultsListPayload(interaction.guildId, page);
+    if (!payload) return interaction.update({ content: '❌ No event results saved.', embeds: [], components: [] });
+    return interaction.update(payload);
   });
 }
 

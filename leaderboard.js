@@ -1,5 +1,6 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { auditLog } = require('./auditlog');
+const { paginate, pageButtons } = require('./pagination');
 
 const {
   SlashCommandBuilder,
@@ -107,18 +108,20 @@ function removeHM(guildId, userId, amount = 1) {
   return user;
 }
 
-// ─── Rankings embed with server statistics panel ──────────────────────────────
-function buildRankingsEmbed(guildId) {
+// ─── Rankings embed with server statistics panel (paged) ──────────────────────
+// Returns { embeds, components } for one page. Nav buttons use the `rankpage`
+// idBase; the button handler in setup re-renders the requested page.
+function buildRankingsPayload(guildId, page = 0) {
   const guildData = lb[guildId] || {};
   const players = Object.entries(guildData)
     .map(([uid, d]) => ({ uid, ...d }))
     .filter(p => p.mvps > 0 || p.hms > 0);
 
   if (players.length === 0) {
-    return new EmbedBuilder()
+    return { embeds: [new EmbedBuilder()
       .setTitle('🏆 Server Rankings')
       .setDescription('No awards have been given yet!')
-      .setColor(0xf0c040);
+      .setColor(0xf0c040)], components: [] };
   }
 
   players.sort((a, b) => score(b) - score(a) || b.mvps - a.mvps || b.hms - a.hms);
@@ -139,33 +142,13 @@ function buildRankingsEmbed(guildId) {
   const avgScore     = (totalScore / totalPlayers).toFixed(2);
   const topPlayer    = ranked[0];
 
-  // Build player lines, split into chunks of max 1000 chars to stay under Discord limit
-  const allLines = ranked.map(p => {
+  const lines = ranked.map(p => {
     const parts = [];
     if (p.mvps > 0) parts.push(`⭐ ${p.mvps} MVP`);
     if (p.hms  > 0) parts.push(`🏅 ${p.hms} HM`);
     return `**#${p.rank}** <@${p.uid}> — ${parts.join(' · ')}`;
   });
 
-  // Pack lines into chunks under 1000 chars each
-  const chunks = [];
-  let current = '';
-  for (const line of allLines) {
-    if (current.length + line.length + 1 > 1000) {
-      chunks.push(current);
-      current = line + '\n';
-    } else {
-      current += line + '\n';
-    }
-  }
-  if (current) chunks.push(current);
-
-  // Build embed — stats in the description, player chunks as fields. Each chunk
-  // is already ≤1000 chars (under the 1024 field limit); using fields instead of
-  // one giant description keeps us under Discord's caps. We also stop adding
-  // fields before the whole embed would exceed Discord's 6000-char total, since
-  // overflowing makes the embed invalid — which would make the pinned-rankings
-  // edit throw and silently drop the auto-refresh pin.
   const statsBlock = [
     `👥 Players: ${totalPlayers}`,
     `⭐ Total MVP: ${totalMVP}`,
@@ -174,25 +157,20 @@ function buildRankingsEmbed(guildId) {
     `👑 Top Player: <@${topPlayer.uid}>`,
   ].join('\n');
 
+  // Page the player lines; budget leaves room for the stats header on each page
+  const pages = paginate(lines, { maxChars: 3400, maxPer: 20 });
+  page = Math.max(0, Math.min(page, pages.length - 1));
+
   const embed = new EmbedBuilder()
     .setTitle('🏆 Server Rankings')
-    .setDescription(`Ranked by score *(1 MVP = 2 HM points)*\n\n**📊 Server Statistics**\n${statsBlock}`)
-    .setFooter({ text: `${totalPlayers} player(s) with awards` })
-    .setColor(0xf0c040);
+    .setColor(0xf0c040)
+    .setDescription(
+      `Ranked by score *(1 MVP = 2 HM points)*\n\n**📊 Server Statistics**\n${statsBlock}\n\n**🏅 Rankings**\n${pages[page].join('\n')}`
+    )
+    .setFooter({ text: `Page ${page + 1}/${pages.length} · ${totalPlayers} player(s) with awards` });
 
-  let used = statsBlock.length + 120; // headroom for title/description/footer text
-  let shown = 0;
-  for (const chunk of chunks) {
-    if (shown >= 24 || used + chunk.length > 5800) break; // stay under 25 fields / 6000 chars
-    embed.addFields({ name: shown === 0 ? '🏅 Rankings' : '​', value: chunk });
-    used += chunk.length;
-    shown++;
-  }
-  if (shown < chunks.length) {
-    embed.addFields({ name: '​', value: '-# …more players not shown — leaderboard too long to display in full.' });
-  }
-
-  return embed;
+  const nav = pageButtons('rankpage', page, pages.length);
+  return { embeds: [embed], components: nav ? [nav] : [] };
 }
 
 // ─── Auto-refresh pinned rankings message ─────────────────────────────────────
@@ -203,7 +181,7 @@ async function refreshRankingsMessage(guildId) {
   try {
     const ch  = await _client.channels.fetch(pin.channelId);
     const msg = await ch.messages.fetch(pin.messageId);
-    await msg.edit({ embeds: [buildRankingsEmbed(guildId)] });
+    await msg.edit(buildRankingsPayload(guildId, 0));
   } catch {
     // Message was deleted — clear the pin so we don't keep trying
     delete pins[guildId];
@@ -344,7 +322,7 @@ function setupLeaderboard(client) {
     }
 
     if (commandName === 'rankings') {
-      await interaction.reply({ embeds: [buildRankingsEmbed(guildId)] });
+      await interaction.reply(buildRankingsPayload(guildId, 0));
       const msg = await interaction.fetchReply();
       pins[guildId] = { channelId: msg.channelId, messageId: msg.id };
       savePins(pins);
@@ -461,6 +439,14 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
         .setColor(0xff4444).setTimestamp();
       return interaction.update({ embeds: [embed], components: [] });
     }
+  });
+
+  // ── Buttons: /rankings pagination (◀ Prev / Next ▶) ──────────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith('rankpage__')) return;
+    const page = parseInt(interaction.customId.split('__')[1]) || 0;
+    return interaction.update(buildRankingsPayload(interaction.guildId, page));
   });
 }
 

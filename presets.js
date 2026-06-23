@@ -16,6 +16,7 @@ const {
 const fs   = require('fs');
 const path = require('path');
 const { writeJson } = require('./jsonstore');
+const { paginate, pageButtons } = require('./pagination');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PRESETS_FILE = path.join(DATA_DIR, 'presets.json');
@@ -39,11 +40,58 @@ const pendingEdits  = {}; // userId → { guildId, presetName, action, factionNa
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function presetOptions(guildId) {
-  return Object.entries(presets[guildId] || {}).map(([n, p]) => ({
+  // Discord caps a select menu at 25 options — slice so the picker can't error
+  // out once there are more than 25 saved presets.
+  return Object.entries(presets[guildId] || {}).slice(0, 25).map(([n, p]) => ({
     label:       n.slice(0, 100),
     description: `${p.title} · ${Object.values(p.factions).reduce((s,f)=>s+f.countries.length,0)} countries`.slice(0,100),
     value:       n,
   }));
+}
+
+// Paged /list_presets payload. Pages the text list AND scopes the preview
+// dropdown to the current page's presets (a select menu maxes out at 25 options,
+// so listing every preset would break once there are more than 25). `userId` is
+// the lister, embedded so the preview dropdown stays restricted to them.
+function buildPresetsListPayload(guildId, userId, page = 0) {
+  const entries = Object.entries(presets[guildId] || {});
+  if (!entries.length) return null;
+
+  const blocks = entries.map(([pName, p]) => {
+    const factionNames = Object.keys(p.factions).join(', ');
+    const countryCount = Object.values(p.factions).reduce((s, f) => s + f.countries.length, 0);
+    const savedDate    = new Date(p.savedAt).toLocaleDateString();
+    return `**"${pName}"** — *${p.title}*\n┗ ${factionNames} · ${countryCount} countries · saved ${savedDate}`;
+  });
+
+  const pages = paginate(blocks, { maxChars: 3600, maxPer: 20 }); // ≤20 keeps the dropdown under 25 options
+  page = Math.max(0, Math.min(page, pages.length - 1));
+
+  const embed = new EmbedBuilder()
+    .setTitle(`💾 Saved Presets (${entries.length})`)
+    .setDescription(pages[page].join('\n\n'))
+    .setColor(0x5865f2)
+    .setFooter({ text: `Page ${page + 1}/${pages.length} · pick below to preview a preset on this page` });
+
+  // Entries shown on this page (blocks map 1:1 to entries, in order)
+  const start = pages.slice(0, page).reduce((s, pg) => s + pg.length, 0);
+  const pageEntries = entries.slice(start, start + pages[page].length);
+
+  const components = [
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`preview_preset_pick__${userId}`)
+        .setPlaceholder('Preview a preset on this page...')
+        .addOptions(pageEntries.map(([n, p]) => ({
+          label:       n.slice(0, 100),
+          description: `${p.title} · ${Object.values(p.factions).reduce((s, f) => s + f.countries.length, 0)} countries`.slice(0, 100),
+          value:       n,
+        })))
+    ),
+  ];
+  const nav = pageButtons(`presetspage__${userId}`, page, pages.length);
+  if (nav) components.push(nav);
+  return { embeds: [embed], components };
 }
 
 function gameOptions(guildId) {
@@ -122,6 +170,18 @@ module.exports.presetCommands = presetCommands;
 // ─── Setup ────────────────────────────────────────────────────────────────────
 function setupPresets(client) {
 
+  // ── Buttons: /list_presets pagination (◀ Prev / Next ▶) ──────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith('presetspage__')) return;
+    const parts   = interaction.customId.split('__'); // ['presetspage', userId, page]
+    const userId  = parts[1];
+    const page    = parseInt(parts[2]) || 0;
+    const payload = buildPresetsListPayload(interaction.guildId, userId, page);
+    if (!payload) return interaction.update({ content: '❌ No presets saved.', embeds: [], components: [] });
+    return interaction.update(payload);
+  });
+
   // ── Slash commands ──────────────────────────────────────────────────────────
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -179,31 +239,9 @@ function setupPresets(client) {
 
     // ── /list_presets — dropdown to preview each ──────────────────────────────
     if (commandName === 'list_presets') {
-      const guildPresets = presets[guildId] || {};
-      const names        = Object.keys(guildPresets);
-      if (names.length === 0) return interaction.reply({ content: '❌ No presets saved yet.', ephemeral: true });
-
-      // Show summary embed + dropdown to preview any one
-      let desc = '';
-      for (const [pName, p] of Object.entries(guildPresets)) {
-        const factionNames = Object.keys(p.factions).join(', ');
-        const countryCount = Object.values(p.factions).reduce((s,f) => s+f.countries.length, 0);
-        const savedDate    = new Date(p.savedAt).toLocaleDateString();
-        desc += `**"${pName}"** — *${p.title}*\n┗ ${factionNames} · ${countryCount} countries · saved ${savedDate}\n\n`;
-      }
-      const embed = new EmbedBuilder()
-        .setTitle(`💾 Saved Presets (${names.length})`)
-        .setDescription(desc)
-        .setColor(0x5865f2)
-        .setFooter({ text: 'Use the dropdown below to preview any preset' });
-
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId(`preview_preset_pick__${interaction.user.id}`)
-          .setPlaceholder('Preview a preset...')
-          .addOptions(presetOptions(guildId))
-      );
-      return interaction.reply({ embeds: [embed], components: [row] });
+      const payload = buildPresetsListPayload(guildId, interaction.user.id, 0);
+      if (!payload) return interaction.reply({ content: '❌ No presets saved yet.', ephemeral: true });
+      return interaction.reply(payload);
     }
 
     // ── /delete_preset — dropdown picker ─────────────────────────────────────
