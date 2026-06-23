@@ -134,7 +134,7 @@ const CATEGORIES = {
       },
       {
         name: '`/blacklists` — Host',
-        value: 'Show every currently blacklisted player at a glance — who they are, the reason, who blacklisted them, and when each blacklist expires (sorted soonest-first). Read-only and private to you; expired entries are cleared automatically. Use `/blacklist` and `/unblacklist` to actually change them.',
+        value: 'Show every currently blacklisted player at a glance — who they are, the reason, who blacklisted them, and when each blacklist expires (sorted soonest-first). Long lists are **paginated** with ◀ Prev / Next ▶ buttons. Read-only and private to you; expired entries are cleared automatically. Use `/blacklist` and `/unblacklist` to actually change them.',
       },
     ],
   },

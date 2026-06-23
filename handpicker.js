@@ -339,6 +339,46 @@ async function refreshMessage(client, gameId, game) {
   }
 }
 
+// Build one page of the /blacklists roster → { embeds, components } or null if
+// none. Mirrors the view_strike paging style: Prev/Next buttons carry the page
+// number in their customId and a button handler re-renders via interaction.update.
+const BLACKLIST_PER_PAGE = 6;
+function buildBlacklistPayload(guildId, page = 0) {
+  const entries = listBlacklist(guildId);
+  if (entries.length === 0) return null;
+
+  // Soonest to expire first (permanent entries last)
+  entries.sort((a, b) => (a[1].expiresAt ?? Infinity) - (b[1].expiresAt ?? Infinity));
+
+  const blocks = entries.map(([userId, e]) => {
+    const expires = e.expiresAt
+      ? `<t:${Math.floor(e.expiresAt / 1000)}:R> (<t:${Math.floor(e.expiresAt / 1000)}:f>)`
+      : 'Never (permanent)';
+    const by = e.bannedBy ? `<@${e.bannedBy}>` : 'Unknown';
+    return (`🚫 <@${userId}>\n┗ ⏰ Expires: ${expires}\n┗ 🛡️ By: ${by}\n┗ 📋 Reason: ${e.reason ?? 'No reason given'}`).slice(0, 600);
+  });
+
+  const totalPages = Math.ceil(blocks.length / BLACKLIST_PER_PAGE);
+  page = Math.max(0, Math.min(page, totalPages - 1));
+  const slice = blocks.slice(page * BLACKLIST_PER_PAGE, page * BLACKLIST_PER_PAGE + BLACKLIST_PER_PAGE);
+
+  const embed = new EmbedBuilder()
+    .setTitle('🚫 Blacklisted Players')
+    .setColor(0xff4444)
+    .setDescription(slice.join('\n\n'))
+    .setFooter({ text: `Page ${page + 1}/${totalPages} · ${entries.length} player(s) blacklisted` })
+    .setTimestamp();
+
+  const components = [];
+  if (totalPages > 1) {
+    components.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`blpage__${page - 1}`).setLabel('◀ Prev').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+      new ButtonBuilder().setCustomId(`blpage__${page + 1}`).setLabel('Next ▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1),
+    ));
+  }
+  return { embeds: [embed], components };
+}
+
 const handpickerCommands = [
   new SlashCommandBuilder()
     .setName('create_handpick')
@@ -728,37 +768,11 @@ function setupHandpicker(client) {
 
     if (commandName === 'blacklists') {
       if (!isHost(interaction.member)) return denyHost(interaction);
-      const entries = listBlacklist(guildId);
-      if (entries.length === 0)
+      const payload = buildBlacklistPayload(guildId, 0);
+      if (!payload)
         return interaction.reply({ content: '✅ No players are currently blacklisted.', ephemeral: true });
-
-      // Soonest to expire first
-      entries.sort((a, b) => (a[1].expiresAt ?? Infinity) - (b[1].expiresAt ?? Infinity));
-
-      let desc = '', shown = 0;
-      for (const [userId, e] of entries) {
-        const expires = e.expiresAt
-          ? `<t:${Math.floor(e.expiresAt / 1000)}:R> (<t:${Math.floor(e.expiresAt / 1000)}:f>)`
-          : 'Never (permanent)';
-        const by   = e.bannedBy ? `<@${e.bannedBy}>` : 'Unknown';
-        const line = `🚫 <@${userId}>\n┗ ⏰ Expires: ${expires}\n┗ 🛡️ By: ${by}\n┗ 📋 Reason: ${e.reason ?? 'No reason given'}\n\n`;
-        if (desc.length + line.length > 4000) break; // stay under the embed description cap
-        desc += line;
-        shown++;
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('🚫 Blacklisted Players')
-        .setColor(0xff4444)
-        .setDescription(desc.trim())
-        .setTimestamp();
-      embed.setFooter({ text: shown < entries.length
-        ? `Showing ${shown} of ${entries.length} — too many to display the rest`
-        : `${entries.length} player(s) currently blacklisted`
-      });
-
-      // Ephemeral so the roster isn't auto-deleted after a few seconds and stays private to staff
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      // Ephemeral so the roster stays private to staff and isn't auto-deleted after a few seconds
+      return interaction.reply({ ...payload, ephemeral: true });
     }
 
     if (commandName === 'list') {
@@ -1040,6 +1054,17 @@ function setupHandpicker(client) {
     if (!interaction.customId.startsWith('unclaim__')) return;
     const gameId = interaction.customId.split('__')[1];
     return performUnclaim(client, interaction, gameId);
+  });
+
+  // ── Buttons: /blacklists pagination (◀ Prev / Next ▶) ────────────────────────
+  client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith('blpage__')) return;
+    if (!isHost(interaction.member)) return denyHost(interaction);
+    const page    = parseInt(interaction.customId.split('__')[1]) || 0;
+    const payload = buildBlacklistPayload(interaction.guildId, page);
+    if (!payload) return interaction.update({ content: '✅ No players are currently blacklisted.', embeds: [], components: [] });
+    return interaction.update(payload);
   });
 
   client.on('interactionCreate', async interaction => {
