@@ -4,6 +4,7 @@ const {
   ActionRowBuilder,
   StringSelectMenuBuilder,
 } = require('discord.js');
+const { getKey } = require('./guildconfig');
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = {
@@ -30,7 +31,7 @@ const CATEGORIES = {
       },
       {
         name: '🏆 Awards',
-        value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, post event results, and auto-grant MVP medal roles (Bronze Star / Airman\'s Medal / Purple Heart).',
+        value: 'Track player performance — give and remove MVPs and Honorable Mentions, view the auto-updating leaderboard, post event results, and auto-grant up to 3 configurable MVP medal roles.',
       },
       {
         name: '👥 Players',
@@ -165,7 +166,7 @@ const CATEGORIES = {
       },
       {
         name: '🎖️ MVP medal roles',
-        value: 'Players are automatically given a **medal role based on their MVP count** — they hold only the **highest** tier they qualify for:\n• 🟫 **Bronze Star** — 1+ MVPs\n• ✈️ **Airman\'s Medal** — 5+ MVPs\n• 💜 **Purple Heart** — 8+ MVPs\n\nThe role updates automatically whenever MVPs change (given, removed, results posted/edited/deleted). Run **`/sync_medals`** *(Admin)* once to grant medals to everyone who already qualifies.',
+        value: 'MEDAL_SUMMARY_PLACEHOLDER',
       },
     ],
   },
@@ -284,7 +285,7 @@ const CATEGORIES = {
     fields: [
       {
         name: 'Where everything is logged',
-        value: 'Moderation and admin actions are logged automatically to <#1508275128025223238> as embeds showing **who did it, to whom, and why** (where a reason applies). The bot\'s list expiry and auto-delete announcements still go to **#homage-poll-log**.',
+        value: 'LOGGING_SUMMARY_PLACEHOLDER',
       },
       {
         name: '🚫 Moderation actions',
@@ -339,21 +340,50 @@ function buildDropdown(activeKey) {
   ];
 }
 
-function buildEmbed(key) {
+// Channels are per-guild config (/setup) now — build the sentence at render
+// time instead of baking in one server's channel IDs.
+function loggingSummary(guildId) {
+  const auditId = getKey(guildId, 'auditChannelId');
+  const logId   = getKey(guildId, 'logChannelId');
+  const audit   = auditId ? `<#${auditId}>` : 'no audit channel yet — run `/setup`';
+  const log     = logId   ? `<#${logId}>`   : 'no log channel yet — run `/setup`';
+  return `Moderation and admin actions are logged automatically to ${audit} as embeds showing **who did it, to whom, and why** (where a reason applies). The bot's list expiry and auto-delete announcements go to ${log}.`;
+}
+
+// Medal roles + their MVP thresholds are fully configurable per guild now —
+// list whatever is actually set instead of a fixed Bronze/Airman/Purple tier.
+function medalSummary(guildId) {
+  const tiers = [1, 2, 3]
+    .map(n => ({ roleId: getKey(guildId, `medalRole${n}Id`), mvps: getKey(guildId, `medalRole${n}Mvps`) ?? [1, 5, 8][n - 1] }))
+    .filter(t => t.roleId)
+    .sort((a, b) => a.mvps - b.mvps);
+  if (!tiers.length) {
+    return 'Up to 3 medal roles can be given automatically based on MVP count — none are configured for this server yet. Set the roles and their MVP thresholds via `/setup`.';
+  }
+  const lines = tiers.map(t => `• <@&${t.roleId}> — ${t.mvps}+ MVPs`).join('\n');
+  return `Players are automatically given a **medal role based on their MVP count** — they hold only the **highest** tier they qualify for:\n${lines}\n\nThe role updates automatically whenever MVPs change (given, removed, results posted/edited/deleted). Run **\`/sync_medals\`** *(Admin)* once to grant medals to everyone who already qualifies. Configure roles/thresholds via \`/setup\`.`;
+}
+
+function buildEmbed(key, guildId) {
   const cat = CATEGORIES[key];
+  const fields = cat.fields.map(f => {
+    if (f.value === 'LOGGING_SUMMARY_PLACEHOLDER') return { ...f, value: loggingSummary(guildId) };
+    if (f.value === 'MEDAL_SUMMARY_PLACEHOLDER')   return { ...f, value: medalSummary(guildId) };
+    return f;
+  });
   const footer = key === 'overview'
     ? 'Pick a category from the menu below to see full details'
     : 'Use the menu below to jump to another category';
   return new EmbedBuilder()
     .setTitle(cat.label)
-    .addFields(cat.fields)
+    .addFields(fields)
     .setColor(cat.color)
     .setFooter({ text: footer });
 }
 
 // One shared payload builder for the slash reply, the !guide message, and selects
-function buildGuide(key) {
-  return { embeds: [buildEmbed(key)], components: buildDropdown(key) };
+function buildGuide(key, guildId) {
+  return { embeds: [buildEmbed(key, guildId)], components: buildDropdown(key) };
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -370,7 +400,7 @@ function setupGuide(client) {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'host_guide') return;
-    return interaction.reply(buildGuide('overview'));
+    return interaction.reply(buildGuide('overview', interaction.guildId));
   });
 
   // !guide prefix command → same guide, replying without pinging
@@ -378,7 +408,7 @@ function setupGuide(client) {
     if (message.author.bot) return;
     if (message.content.trim().toLowerCase() !== '!guide') return;
     try {
-      await message.reply({ ...buildGuide('overview'), allowedMentions: { repliedUser: false } });
+      await message.reply({ ...buildGuide('overview', message.guildId), allowedMentions: { repliedUser: false } });
     } catch (e) { console.warn('!guide failed:', e.message); }
   });
 
@@ -388,7 +418,7 @@ function setupGuide(client) {
     if (interaction.customId !== 'guide_cat') return;
     const key = interaction.values[0];
     if (!CATEGORIES[key]) return interaction.update({ content: '❌ Unknown category.', components: [] });
-    return interaction.update(buildGuide(key));
+    return interaction.update(buildGuide(key, interaction.guildId));
   });
 }
 

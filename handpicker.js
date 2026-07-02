@@ -1024,6 +1024,11 @@ function setupHandpicker(client) {
     const gameId = customId.split('__')[1];
     const game   = games[gameId];
     if (!game) return interaction.update({ content: '❌ This handpick list no longer exists.', embeds: [], components: [] });
+    // These buttons are DM-only, so Discord already scopes them to the
+    // recipient — but check explicitly rather than relying on that alone.
+    if (interaction.user.id !== game.host) {
+      return interaction.reply({ content: '❌ This isn\'t your handpick list.', ephemeral: true });
+    }
 
     if (customId.startsWith('extras_open__')) {
       game.extrasOpen = true;
@@ -1167,21 +1172,6 @@ function setupHandpicker(client) {
     if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUserId, factionName).catch(() => {}); }
     await refreshMessage(client, gameId, game);
     return interaction.update({ content: `✅ <@${targetUserId}>'s claim on **${country}** has been removed.`, components: [] });
-  });
-
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (!interaction.customId.startsWith('preset_players_list_pick__')) return;
-    const userId  = interaction.customId.split('__')[1];
-    if (interaction.user.id !== userId) return interaction.reply({ content: '❌ This menu is not for you.', ephemeral: true });
-    const gameId = interaction.values[0];
-    const game   = games[gameId];
-    if (!game) return interaction.update({ content: '❌ List no longer exists.', components: [] });
-    await interaction.update({ content: '📋 Opening preset players form...', components: [] });
-    const modal = new ModalBuilder().setCustomId(`preset_players_modal__${gameId}__live`).setTitle('Add Preset Players');
-    const textInput = new TextInputBuilder().setCustomId('preset_players_text').setLabel('Country: UserID (one per line)').setStyle(TextInputStyle.Paragraph).setPlaceholder('Germany: 123456789012345678\nFrance: 987654321098765432').setRequired(true).setMaxLength(4000);
-    modal.addComponents(new ActionRowBuilder().addComponents(textInput));
-    await interaction.followUp({ content: '⬇️ Fill in the form below:', ephemeral: true });
   });
 
   client.on('interactionCreate', async interaction => {
@@ -1345,6 +1335,11 @@ function setupHandpicker(client) {
 
     if (interaction.customId.startsWith('list_extend__')) {
       const gameId = interaction.customId.replace('list_extend__', '');
+      const game = games[gameId];
+      if (!game) return interaction.reply({ content: '❌ This handpick list no longer exists.', ephemeral: true });
+      if (interaction.user.id !== game.host) {
+        return interaction.reply({ content: '❌ This isn\'t your handpick list.', ephemeral: true });
+      }
       const modal = new ModalBuilder()
         .setCustomId(`list_extend_modal__${gameId}`)
         .setTitle('Extend Handpick List');
@@ -1363,9 +1358,12 @@ function setupHandpicker(client) {
 
     if (interaction.customId.startsWith('list_unlock__')) {
       const gameId = interaction.customId.replace('list_unlock__', '');
-      clearListExpiryCancelTimer(gameId);
       const game = games[gameId];
       if (!game) return interaction.update({ content: '❌ List no longer exists.', components: [] });
+      if (interaction.user.id !== game.host) {
+        return interaction.reply({ content: '❌ This isn\'t your handpick list.', ephemeral: true });
+      }
+      clearListExpiryCancelTimer(gameId);
       game.locked = false;
       game.listExpiryAt = null;
       save(GAMES_FILE, games);
@@ -1391,9 +1389,12 @@ function setupHandpicker(client) {
     if (!interaction.isModalSubmit()) return;
     if (!interaction.customId.startsWith('list_extend_modal__')) return;
     const gameId = interaction.customId.replace('list_extend_modal__', '');
-    clearListExpiryCancelTimer(gameId);
     const game = games[gameId];
     if (!game) return interaction.reply({ content: '❌ List no longer exists.', ephemeral: true });
+    if (interaction.user.id !== game.host) {
+      return interaction.reply({ content: '❌ This isn\'t your handpick list.', ephemeral: true });
+    }
+    clearListExpiryCancelTimer(gameId);
     const raw = interaction.fields.getTextInputValue('extend_duration');
     const ms  = parseDuration(raw);
     if (ms <= 0) return interaction.reply({ content: '❌ Invalid duration. Use format like `30m`, `1h`, or `1h 30m`.', ephemeral: true });
