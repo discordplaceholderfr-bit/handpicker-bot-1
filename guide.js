@@ -9,10 +9,29 @@ const { getKey } = require('./guildconfig');
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = {
 
+  setup: {
+    label: '⚙️ Setup',
+    color: 0x5865f2,
+    fields: [
+      {
+        name: '`/setup` — Admin',
+        value: 'Interactive panel for configuring this server. Pick a setting from the dropdown, then choose a channel or role from a native picker — changes save immediately.\n\n**Settings:**\n• 📢 Log Channel — list expiry / auto-reset / reopen announcements\n• 📝 Audit Log Channel — every moderation & admin action\n• 🏆 Rankings Channel — where the live leaderboard is pinned\n• 🛡️ Host Roles — who can run Host commands (multi-select)\n• 🎖️ 3 Medal Roles — each with its own configurable MVP threshold (e.g. "Role for 5+ MVPs"), full details in **🏆 Awards**',
+      },
+      {
+        name: 'Nothing is required to work — features just skip',
+        value: 'Leaving a setting unset doesn\'t break anything: no rankings channel means `/rankings` won\'t auto-pin, no medal role means that tier is never granted, and so on. Run `/setup` once per server, and admins can revisit it any time to change a setting.',
+      },
+    ],
+  },
+
   overview: {
     label: '⚡ Overview',
     color: 0x5865f2,
     fields: [
+      {
+        name: '⚙️ Setup',
+        value: 'First step on a new server — an admin runs `/setup` to configure the log channel, audit channel, rankings channel, Host roles, and medal roles.',
+      },
       {
         name: '📋 Creating',
         value: 'Build handpick lists with factions and countries — from scratch, by pasting pre-written text, or by adding factions to a live list. Players can also be pre-assigned to countries before the list posts.',
@@ -75,6 +94,10 @@ const CATEGORIES = {
       {
         name: '`/add_faction` — Host',
         value: 'Add a new faction to an already active list. Provide the name and a comma-separated country list. Maximum 5 factions per list.\n\n**Example:**\n`/add_faction name:Comintern countries:*USSR, China, Mongolia`\n\nPrefix any country with `*` to mark it as Major — it shows as 🔸 in the embed and requires an approved Major role to claim.\nAdd `(Extra)` to a country name (e.g. `Spain (Extra)`) to make it an overflow slot — locked until all main countries are claimed and you open extras.',
+      },
+      {
+        name: '`/list`',
+        value: 'Re-posts the current handpick list\'s embed as a fresh reply — handy if the original message scrolled out of view.',
       },
     ],
   },
@@ -312,6 +335,7 @@ const CATEGORIES = {
 // Order shown in the dropdown + a one-line description for each option.
 const MENU = [
   { key: 'overview',     desc: 'Start here — what every category covers' },
+  { key: 'setup',        desc: 'Configure channels, roles & medals' },
   { key: 'creating',     desc: 'Build & import lists, add factions' },
   { key: 'editing',      desc: 'Change a live list, edit presets' },
   { key: 'presets',      desc: 'Save, load, edit reusable lists' },
