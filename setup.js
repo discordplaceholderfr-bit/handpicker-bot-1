@@ -50,7 +50,7 @@ function pickerPayload(setting, userId) {
     picker = new ChannelSelectMenuBuilder()
       .setCustomId(`setup_set__${setting.key}__${userId}`)
       .setPlaceholder(`Pick a channel for ${setting.label}`)
-      .addChannelTypes(ChannelType.GuildText)
+      .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread)
       .setMinValues(1).setMaxValues(1);
   } else if (setting.type === 'role') {
     picker = new RoleSelectMenuBuilder()
