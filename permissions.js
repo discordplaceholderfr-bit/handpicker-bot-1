@@ -1,24 +1,24 @@
-// ─── Role IDs ─────────────────────────────────────────────────────────────────
-const HOST_ROLE_ID           = '1449480011005431818';
-const UNDERCLASS_HOST_ROLE_ID = '1472021412888707164';
+const { getKey } = require('./guildconfig');
 
 // ─── Permission check helpers ─────────────────────────────────────────────────
 function isAdmin(member) {
-  return member.permissions.has('Administrator');
+  return !!member && member.permissions.has('Administrator');
 }
 
+// Host = Discord Administrator, OR a member holding one of the roles configured
+// as Host for this guild via /setup. Admins always pass so a freshly-added
+// server is usable before any Host roles are set.
 function isHost(member) {
-  return (
-    member.roles.cache.has(HOST_ROLE_ID) ||
-    member.roles.cache.has(UNDERCLASS_HOST_ROLE_ID) ||
-    isAdmin(member)
-  );
+  if (!member) return false;
+  if (isAdmin(member)) return true;
+  const hostRoles = getKey(member.guild.id, 'hostRoles') || [];
+  return hostRoles.some(r => member.roles.cache.has(r));
 }
 
-// ─── Permission deny helper ───────────────────────────────────────────────────
+// ─── Permission deny helpers ──────────────────────────────────────────────────
 async function denyHost(interaction) {
   return interaction.reply({
-    content: '❌ You need the **Host** or **Underclass Host** role to use this command.',
+    content: '❌ You need a **Host** role (or **Administrator**) to use this command. An admin can grant Host roles with `/setup`.',
     ephemeral: true,
   });
 }
@@ -30,4 +30,4 @@ async function denyAdmin(interaction) {
   });
 }
 
-module.exports = { isAdmin, isHost, denyHost, denyAdmin, HOST_ROLE_ID, UNDERCLASS_HOST_ROLE_ID };
+module.exports = { isAdmin, isHost, denyHost, denyAdmin };

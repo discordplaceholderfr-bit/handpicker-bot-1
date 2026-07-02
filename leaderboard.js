@@ -1,6 +1,7 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { auditLog } = require('./auditlog');
 const { paginate, pageButtons } = require('./pagination');
+const { getKey } = require('./guildconfig');
 
 const {
   SlashCommandBuilder,
@@ -18,10 +19,6 @@ const { writeJson } = require('./jsonstore');
 const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const LB_FILE     = path.join(DATA_DIR, 'leaderboard.json');
 const RANKPIN_FILE = path.join(DATA_DIR, 'rankings_pin.json');
-
-// The single live, auto-updating leaderboard always lives (and stays pinned) in
-// this channel, regardless of where /rankings is run.
-const RANKINGS_CHANNEL_ID = '1487616503250423961';
 
 function loadLB() {
   try { return fs.existsSync(LB_FILE) ? JSON.parse(fs.readFileSync(LB_FILE, 'utf8')) : {}; }
@@ -54,22 +51,31 @@ function getUser(guildId, userId, username) {
 function score(p) { return p.mvps * 2 + p.hms; }
 
 // ── Medal roles by MVP count (highest tier only) ─────────────────────────────
-// Sorted high → low so the first one a user qualifies for is their top medal.
-const MEDAL_ROLES = [
-  { roleId: '1463738464120869028', minMvps: 8, name: 'Purple Heart' },
-  { roleId: '1463377181198782667', minMvps: 5, name: "Airman's Medal" },
-  { roleId: '1463429416108429386', minMvps: 1, name: 'Bronze Star' },
-];
+// Role IDs come from per-guild config (/setup); thresholds are fixed. Sorted
+// high → low so the first tier a user qualifies for is their top medal. Returns
+// [] if this guild hasn't configured any medal roles.
+function medalTiers(guildId) {
+  const tiers = [];
+  const purple = getKey(guildId, 'medalPurpleRoleId');
+  const airman = getKey(guildId, 'medalAirmanRoleId');
+  const bronze = getKey(guildId, 'medalBronzeRoleId');
+  if (purple) tiers.push({ roleId: purple, minMvps: 8 });
+  if (airman) tiers.push({ roleId: airman, minMvps: 5 });
+  if (bronze) tiers.push({ roleId: bronze, minMvps: 1 });
+  return tiers;
+}
 
 // Give the member only the highest medal role they qualify for; strip the rest.
 // Reads the user's current MVP count from the in-memory leaderboard.
 async function syncMedalRoles(guild, userId) {
   if (!guild) return;
+  const tiers = medalTiers(guild.id);
+  if (tiers.length === 0) return; // guild hasn't configured medal roles
   let member;
   try { member = await guild.members.fetch(userId); } catch { return; } // left the server
   const mvps   = lb[guild.id]?.[userId]?.mvps || 0;
-  const earned = MEDAL_ROLES.find(m => mvps >= m.minMvps) || null;
-  for (const m of MEDAL_ROLES) {
+  const earned = tiers.find(m => mvps >= m.minMvps) || null;
+  for (const m of tiers) {
     const has = member.roles.cache.has(m.roleId);
     if (earned && m.roleId === earned.roleId) {
       if (!has) await member.roles.add(m.roleId).catch(() => {});
@@ -180,13 +186,15 @@ function buildRankingsPayload(guildId, page = 0) {
 // ─── Auto-refresh pinned rankings message ─────────────────────────────────────
 async function refreshRankingsMessage(guildId) {
   if (!_client) return;
+  const channelId = getKey(guildId, 'rankingsChannelId');
+  if (!channelId) return; // no rankings channel configured for this guild
   try {
-    const channel = await _client.channels.fetch(RANKINGS_CHANNEL_ID).catch(() => null);
+    const channel = await _client.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
 
-    // Reuse the tracked message only if it's the one in the fixed channel
+    // Reuse the tracked message only if it's the one in the configured channel
     const pin = pins[guildId];
-    let msg = (pin?.channelId === RANKINGS_CHANNEL_ID && pin.messageId)
+    let msg = (pin?.channelId === channelId && pin.messageId)
       ? await channel.messages.fetch(pin.messageId).catch(() => null)
       : null;
 
@@ -194,10 +202,10 @@ async function refreshRankingsMessage(guildId) {
     if (msg) {
       await msg.edit(payload);
     } else {
-      // First run, deleted, or previously pinned elsewhere — post a fresh live
-      // message in the fixed channel and pin it.
+      // First run, deleted, or the channel changed — post a fresh live message
+      // in the configured channel and pin it.
       msg = await channel.send(payload);
-      pins[guildId] = { channelId: RANKINGS_CHANNEL_ID, messageId: msg.id };
+      pins[guildId] = { channelId, messageId: msg.id };
       savePins(pins);
       try { await msg.pin(); } catch { /* bot lacks Manage Messages — leave unpinned */ }
     }
@@ -283,7 +291,7 @@ function setupLeaderboard(client) {
       await interaction.reply({ embeds: [embed] }); // public
       refreshRankingsMessage(guildId).catch(() => {});
       syncMedalRoles(interaction.guild, target.id).catch(() => {});
-      auditLog('⭐ MVP Given', `<@${interaction.user.id}> gave **${amount} MVP${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.mvps}).`, 0xffd700);
+      auditLog(interaction.guildId, '⭐ MVP Given', `<@${interaction.user.id}> gave **${amount} MVP${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.mvps}).`, 0xffd700);
       return;
     }
 
@@ -305,7 +313,7 @@ function setupLeaderboard(client) {
         .setColor(0xc0c0c0).setTimestamp();
       await interaction.reply({ embeds: [embed] }); // public
       refreshRankingsMessage(guildId).catch(() => {});
-      auditLog('🏅 HM Given', `<@${interaction.user.id}> gave **${amount} HM${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.hms}).`, 0xc0c0c0);
+      auditLog(interaction.guildId, '🏅 HM Given', `<@${interaction.user.id}> gave **${amount} HM${amount !== 1 ? 's' : ''}** to <@${target.id}> (now at ${user.hms}).`, 0xc0c0c0);
       return;
     }
 
@@ -320,7 +328,7 @@ function setupLeaderboard(client) {
       await interaction.reply({ content: `✅ Removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.mvps}**.` });
       refreshRankingsMessage(guildId).catch(() => {});
       syncMedalRoles(interaction.guild, target.id).catch(() => {});
-      auditLog('⭐ MVP Removed', `<@${interaction.user.id}> removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.mvps}).`, 0xed4245);
+      auditLog(interaction.guildId, '⭐ MVP Removed', `<@${interaction.user.id}> removed **${amount} MVP${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.mvps}).`, 0xed4245);
       return;
     }
 
@@ -334,15 +342,22 @@ function setupLeaderboard(client) {
       saveLB(lb);
       await interaction.reply({ content: `✅ Removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}>. Now at **${user.hms}**.` });
       refreshRankingsMessage(guildId).catch(() => {});
-      auditLog('🏅 HM Removed', `<@${interaction.user.id}> removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.hms}).`, 0xed4245);
+      auditLog(interaction.guildId, '🏅 HM Removed', `<@${interaction.user.id}> removed **${amount} HM${amount !== 1 ? 's' : ''}** from <@${target.id}> (now at ${user.hms}).`, 0xed4245);
       return;
     }
 
     if (commandName === 'rankings') {
+      const channelId = getKey(guildId, 'rankingsChannelId');
+      if (!channelId) {
+        return interaction.reply({
+          content: '❌ No rankings channel is set for this server. An admin can set one with `/setup`.',
+          ephemeral: true,
+        });
+      }
       // Ack immediately, then (re)post/refresh the single pinned live leaderboard
-      // in the fixed channel so the auto-updating copy always lives there.
+      // in the configured channel so the auto-updating copy always lives there.
       await interaction.reply({
-        content: `📌 The live leaderboard is pinned in <#${RANKINGS_CHANNEL_ID}> and updates automatically whenever awards change.`,
+        content: `📌 The live leaderboard is pinned in <#${channelId}> and updates automatically whenever awards change.`,
         ephemeral: true,
       });
       refreshRankingsMessage(guildId).catch(() => {});
@@ -353,7 +368,7 @@ function setupLeaderboard(client) {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       await interaction.deferReply({ ephemeral: true });
       const count = await syncAllMedals(interaction.guild);
-      auditLog('🎖️ Medals Synced', `<@${interaction.user.id}> re-synced MVP medal roles for **${count}** player(s).`, 0xffd700);
+      auditLog(interaction.guildId, '🎖️ Medals Synced', `<@${interaction.user.id}> re-synced MVP medal roles for **${count}** player(s).`, 0xffd700);
       return interaction.editReply({ content: `✅ Synced medal roles for **${count}** player(s) on the leaderboard.` });
     }
 
@@ -436,7 +451,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       refreshRankingsMessage(targetGuildId).catch(() => {});
       // Strip medal roles from everyone who was on the leaderboard (now 0 MVPs)
       if (interaction.guild) for (const uid of clearedIds) syncMedalRoles(interaction.guild, uid).catch(() => {});
-      auditLog('🗑️ Leaderboard Reset', `<@${interaction.user.id}> wiped the entire leaderboard.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ Leaderboard Reset', `<@${interaction.user.id}> wiped the entire leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Leaderboard Reset')
         .setDescription('The server leaderboard has been completely wiped. All MVPs and HMs cleared.')
@@ -452,7 +467,7 @@ They currently have ⭐ **${p.mvps} MVP** and 🏅 **${p.hms} HM**.
       saveLB(lb);
       refreshRankingsMessage(targetGuildId).catch(() => {});
       syncMedalRoles(interaction.guild, targetUserId).catch(() => {}); // now 0 MVPs → strips medals
-      auditLog('🗑️ Player Removed from Leaderboard', `<@${interaction.user.id}> removed <@${targetUserId}> from the leaderboard.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ Player Removed from Leaderboard', `<@${interaction.user.id}> removed <@${targetUserId}> from the leaderboard.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Player Removed')
         .setDescription(`<@${targetUserId}> has been removed from the leaderboard.`)

@@ -1,6 +1,7 @@
 const { isAdmin, isHost, denyHost, denyAdmin } = require('./permissions');
 const { auditLog } = require('./auditlog');
 const { getBlacklist, addBlacklist, removeBlacklist, listBlacklist } = require('./blacklist');
+const { getKey } = require('./guildconfig');
 
 const {
   ActionRowBuilder,
@@ -86,8 +87,9 @@ function scheduleGameReset(client, gameId) {
     await stripAllTeamRoles(client, g);
     await deleteUnclaimMessage(client, g);
     try {
-      const ch = await client.channels.fetch('1508275084026974293');
-      await ch.send({ embeds: [new EmbedBuilder()
+      const logId = getKey(g.guildId, 'logChannelId');
+      const ch = logId && await client.channels.fetch(logId);
+      if (ch) await ch.send({ embeds: [new EmbedBuilder()
         .setTitle('⏰ Handpick List Expired')
         .setDescription(`**"${g.title}"** has been automatically reset after 3 hours.`)
         .setColor(0xff9900).setTimestamp()
@@ -156,8 +158,9 @@ async function fireListExpiry(client, gameId) {
     await stripAllTeamRoles(client, g);
     await deleteUnclaimMessage(client, g);
     try {
-      const ch = await client.channels.fetch('1508275084026974293');
-      await ch.send({ embeds: [new EmbedBuilder()
+      const logId = getKey(g.guildId, 'logChannelId');
+      const ch = logId && await client.channels.fetch(logId);
+      if (ch) await ch.send({ embeds: [new EmbedBuilder()
         .setTitle('🗑️ List Automatically Deleted')
         .setDescription(`**"${g.title}"** was deleted — the host didn't respond within 10 minutes of the list closing.`)
         .setColor(0xff4444).setTimestamp()
@@ -720,7 +723,7 @@ function setupHandpicker(client) {
       if (ms <= 0) return interaction.reply({ content: '❌ Invalid duration. Use format like `1d`, `2h`, `30m`, or combined `1d 2h 30m`.', ephemeral: true });
       const expiresAt = Date.now() + ms;
       addBlacklist(guildId, target.id, { reason, bannedBy: interaction.user.id, expiresAt });
-      auditLog('🚫 Player Blacklisted', `<@${interaction.user.id}> blacklisted <@${target.id}> for **${durationStr}**.\n**Reason:** ${reason}`, 0xff4444);
+      auditLog(interaction.guildId, '🚫 Player Blacklisted', `<@${interaction.user.id}> blacklisted <@${target.id}> for **${durationStr}**.\n**Reason:** ${reason}`, 0xff4444);
 
       // DM the blacklisted user with the reason and when it expires
       try {
@@ -751,7 +754,7 @@ function setupHandpicker(client) {
       if (!isAdmin(interaction.member)) return denyAdmin(interaction);
       const target = interaction.options.getUser('user');
       if (!removeBlacklist(guildId, target.id)) return interaction.reply({ content: `❌ <@${target.id}> is not blacklisted.`, ephemeral: true });
-      auditLog('✅ Player Unblacklisted', `<@${interaction.user.id}> removed <@${target.id}> from the blacklist.`, 0x57f287);
+      auditLog(interaction.guildId, '✅ Player Unblacklisted', `<@${interaction.user.id}> removed <@${target.id}> from the blacklist.`, 0x57f287);
 
       // DM the user that they've been unblacklisted
       try {
@@ -805,12 +808,12 @@ function setupHandpicker(client) {
       if (idx === -1) {
         majorRoles[guildId].push(role.id);
         save(ROLES_FILE, majorRoles);
-        auditLog('⭐ Major Role Added', `<@${interaction.user.id}> gave <@&${role.id}> permission to claim Major countries.`, 0xff9900);
+        auditLog(interaction.guildId, '⭐ Major Role Added', `<@${interaction.user.id}> gave <@&${role.id}> permission to claim Major countries.`, 0xff9900);
         return interaction.reply({ content: `✅ <@&${role.id}> added to Major roles.` });
       } else {
         majorRoles[guildId].splice(idx, 1);
         save(ROLES_FILE, majorRoles);
-        auditLog('⭐ Major Role Removed', `<@${interaction.user.id}> removed <@&${role.id}>'s permission to claim Major countries.`, 0xff9900);
+        auditLog(interaction.guildId, '⭐ Major Role Removed', `<@${interaction.user.id}> removed <@&${role.id}>'s permission to claim Major countries.`, 0xff9900);
         return interaction.reply({ content: `✅ <@&${role.id}> removed from Major roles.` });
       }
     }
@@ -1368,8 +1371,9 @@ function setupHandpicker(client) {
       save(GAMES_FILE, games);
       try { await refreshMessage(client, gameId, game); } catch {}
       try {
-        const ch = await client.channels.fetch('1508275084026974293');
-        await ch.send({ embeds: [new EmbedBuilder()
+        const logId = getKey(game.guildId, 'logChannelId');
+        const ch = logId && await client.channels.fetch(logId);
+        if (ch) await ch.send({ embeds: [new EmbedBuilder()
           .setTitle('🔓 List Reopened')
           .setDescription(`**"${game.title}"** is open again — players can claim countries.`)
           .setColor(0x57f287).setTimestamp()
@@ -1399,8 +1403,9 @@ function setupHandpicker(client) {
     scheduleListExpiry(client, gameId);
     try { await refreshMessage(client, gameId, game); } catch {}
     try {
-      const ch = await client.channels.fetch('1508275084026974293');
-      await ch.send({ embeds: [new EmbedBuilder()
+      const logId = getKey(game.guildId, 'logChannelId');
+      const ch = logId && await client.channels.fetch(logId);
+      if (ch) await ch.send({ embeds: [new EmbedBuilder()
         .setTitle('⏱️ List Extended')
         .setDescription(`**"${game.title}"** is open again for **${raw}**.\nNew deadline: <t:${Math.floor(game.listExpiryAt / 1000)}:R>`)
         .setColor(0x5865f2).setTimestamp()
@@ -1469,7 +1474,7 @@ function setupHandpicker(client) {
       if (game) await deleteUnclaimMessage(client, game);
       delete games[gameId];
       save(GAMES_FILE, games);
-      auditLog('🗑️ List Deleted', `<@${interaction.user.id}> deleted the handpick list **"${title}"**.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ List Deleted', `<@${interaction.user.id}> deleted the handpick list **"${title}"**.`, 0xff4444);
       const embed = new EmbedBuilder().setTitle('🗑️ List Deleted').setDescription(`Handpick list **"${title}"** has been deleted.`).setColor(0xff4444).setTimestamp();
       return interaction.update({ embeds: [embed], components: [] });
     }
@@ -1481,7 +1486,7 @@ function setupHandpicker(client) {
       }
       for (const id of guildGameIds) { await deleteUnclaimMessage(client, games[id]); delete games[id]; }
       save(GAMES_FILE, games);
-      auditLog('🗑️ All Lists Reset', `<@${interaction.user.id}> wiped all handpick lists.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ All Lists Reset', `<@${interaction.user.id}> wiped all handpick lists.`, 0xff4444);
       const embed = new EmbedBuilder().setTitle('🗑️ Lists Reset').setDescription(`All handpick lists for this server have been wiped.`).setColor(0xff4444).setTimestamp();
       return interaction.update({ embeds: [embed], components: [] });
     }

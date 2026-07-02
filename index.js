@@ -7,6 +7,7 @@ const { setupTeams, teamCommands } = require('./teams');
 const { setupImporter, importerCommands } = require('./importer');
 const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
+const { setupSetup, setupCommands } = require('./setup');
 const { initAuditLog } = require('./auditlog');
 const lock = require('./lock');
 
@@ -46,21 +47,16 @@ client.once('clientReady', async (readyClient) => {
     ...importerCommands,
     ...guideCommands,
     ...resultsCommands,
-  ];
+    ...setupCommands,
+    // Guild-installable, guild-only context so the bot can be added to any server
+  ].map(c => ({ ...c, integration_types: [0], contexts: [0] }));
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
-    // ── Clear global commands (removes duplicates from old versions) ──────────
-    await rest.put(Routes.applicationCommands(readyClient.user.id), { body: [] });
-    console.log('✅ Cleared global commands (no more duplicates)');
-
-    // ── Register guild commands (instant, per server) ─────────────────────────
-    const guilds = readyClient.guilds.cache;
-    console.log(`📡 Registering ${allCommands.length} commands to ${guilds.size} server(s)...`);
-    for (const [guildId] of guilds) {
-      await rest.put(Routes.applicationGuildCommands(readyClient.user.id, guildId), { body: allCommands });
-    }
-    console.log(`✅ Registered ${allCommands.length} slash commands to all servers`);
+    // Register GLOBAL commands so the bot works in every server that adds it.
+    // (Global registration can take up to ~1h to propagate the first time.)
+    await rest.put(Routes.applicationCommands(readyClient.user.id), { body: allCommands });
+    console.log(`✅ Registered ${allCommands.length} global slash commands`);
   } catch (err) {
     console.error('Failed to register commands:', err);
   }
@@ -173,6 +169,7 @@ setupTeams(client);
 setupImporter(client);
 setupGuide(client);
 setupResults(client);
+setupSetup(client);
 
 // Acquire the single-instance lock BEFORE connecting, so only one copy of the
 // bot is ever on the gateway (prevents double reactions / double posts / double

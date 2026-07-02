@@ -215,7 +215,7 @@ function setupResults(client) {
     const parts = [];
     if (mvps.length) parts.push(`**${mvps.length} MVP${mvps.length > 1 ? 's' : ''}** — ${mvps.map(id => `<@${id}>`).join(', ')}`);
     if (hms.length)  parts.push(`**${hms.length} HM${hms.length > 1 ? 's' : ''}** — ${hms.map(id => `<@${id}>`).join(', ')}`);
-    auditLog('🏁 Results Logged', `<@${interaction.user.id}> logged ${parts.join(' · ')} from a [message](${msg.url}).`, 0x57f287);
+    auditLog(interaction.guildId, '🏁 Results Logged', `<@${interaction.user.id}> logged ${parts.join(' · ')} from a [message](${msg.url}).`, 0x57f287);
 
     // Non-ephemeral confirmation (auto-deleted after 12s by index.js)
     return interaction.reply({ content: `✅ Read [that message](${msg.url}) and logged:\n${parts.join('\n')}\n\nRankings and medal roles updated. *(Use \`/remove_mvp\`/\`/remove_hm\` if it picked up someone by mistake.)*` });
@@ -294,7 +294,7 @@ function setupResults(client) {
 
       refreshRankingsMessage(guildId).catch(() => {});
       for (const uid of mvpChanged) syncMedalRoles(interaction.guild, uid).catch(() => {});
-      auditLog('✏️ Result Edited', `<@${interaction.user.id}> edited the result **"${existing.eventName}"**.`, 0xfee75c);
+      auditLog(interaction.guildId, '✏️ Result Edited', `<@${interaction.user.id}> edited the result **"${existing.eventName}"**.`, 0xfee75c);
       return interaction.editReply({ content: '✅ Result updated and leaderboard adjusted.' });
       } catch (e) {
         console.error('edit_result error:', e);
@@ -382,7 +382,7 @@ function setupResults(client) {
         saveResults(allResults);
         refreshRankingsMessage(guildId).catch(() => {});
         for (const f of result.factions) for (const uid of f.mvps || []) syncMedalRoles(interaction.guild, uid).catch(() => {});
-        auditLog('🗑️ Result Deleted', `<@${interaction.user.id}> deleted the result **"${result.eventName}"** (awards revoked).`, 0xff4444);
+        auditLog(interaction.guildId, '🗑️ Result Deleted', `<@${interaction.user.id}> deleted the result **"${result.eventName}"** (awards revoked).`, 0xff4444);
       }
       return interaction.update({ content: '🗑️ Event result deleted and awards removed.', embeds: [], components: [] });
     }
@@ -406,7 +406,7 @@ function setupResults(client) {
       saveResults(allResults);
       refreshRankingsMessage(guildId).catch(() => {});
       for (const uid of medalUsers) syncMedalRoles(interaction.guild, uid).catch(() => {});
-      auditLog('🗑️ All Results Wiped', `<@${interaction.user.id}> wiped all event results (awards revoked).`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ All Results Wiped', `<@${interaction.user.id}> wiped all event results (awards revoked).`, 0xff4444);
       return interaction.update({ content: '🗑️ All event results wiped and awards removed.', embeds: [], components: [] });
     }
   });

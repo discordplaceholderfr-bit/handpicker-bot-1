@@ -456,7 +456,7 @@ function setupPresets(client) {
       const name    = decodeURIComponent(parts[2]);
       delete presets[guildId]?.[name];
       savePresets(presets);
-      auditLog('🗑️ Preset Deleted', `<@${interaction.user.id}> deleted the preset **"${name}"**.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ Preset Deleted', `<@${interaction.user.id}> deleted the preset **"${name}"**.`, 0xff4444);
       return interaction.update({ content: `🗑️ Preset **"${name}"** has been deleted.`, components: [] });
     }
 
@@ -464,7 +464,7 @@ function setupPresets(client) {
       const targetGuildId = interaction.customId.split('__')[1];
       presets[targetGuildId] = {};
       savePresets(presets);
-      auditLog('🗑️ All Presets Reset', `<@${interaction.user.id}> deleted all saved presets.`, 0xff4444);
+      auditLog(interaction.guildId, '🗑️ All Presets Reset', `<@${interaction.user.id}> deleted all saved presets.`, 0xff4444);
       const embed = new EmbedBuilder()
         .setTitle('🗑️ Presets Reset')
         .setDescription('All saved presets for this server have been deleted.')
@@ -600,7 +600,7 @@ function setupPresets(client) {
     if (edit.action === 'remove_faction') {
       delete preset.factions[factionName];
       savePresets(presets);
-      auditLog('✏️ Preset Edited', `<@${interaction.user.id}> removed faction **${factionName}** from preset **"${edit.presetName}"**.`, 0xfee75c);
+      auditLog(interaction.guildId, '✏️ Preset Edited', `<@${interaction.user.id}> removed faction **${factionName}** from preset **"${edit.presetName}"**.`, 0xfee75c);
       return interaction.update({ content: `✅ Faction **${factionName}** removed from preset **"${edit.presetName}"**.`, components: [] });
     }
 
@@ -634,7 +634,7 @@ function setupPresets(client) {
     faction.countries = faction.countries.filter(c => !toRemove.has(c));
     delete pendingEdits[userId];
     savePresets(presets);
-    auditLog('✏️ Preset Edited', `<@${interaction.user.id}> removed **${toRemove.size}** country(ies) from **${edit.factionName}** in preset **"${edit.presetName}"**.`, 0xfee75c);
+    auditLog(interaction.guildId, '✏️ Preset Edited', `<@${interaction.user.id}> removed **${toRemove.size}** country(ies) from **${edit.factionName}** in preset **"${edit.presetName}"**.`, 0xfee75c);
     return interaction.update({ content: `✅ Removed **${toRemove.size}** country(ies) from **${edit.factionName}** in preset **"${edit.presetName}"**.`, components: [] });
   });
 
@@ -652,7 +652,7 @@ function setupPresets(client) {
       preset.title   = newTitle;
       delete pendingEdits[userId];
       savePresets(presets);
-      auditLog('✏️ Preset Edited', `<@${interaction.user.id}> renamed the title of preset **"${edit.presetName}"** to **"${newTitle}"**.`, 0xfee75c);
+      auditLog(interaction.guildId, '✏️ Preset Edited', `<@${interaction.user.id}> renamed the title of preset **"${edit.presetName}"** to **"${newTitle}"**.`, 0xfee75c);
       return interaction.reply({ content: `✅ Preset **"${edit.presetName}"** title updated to **"${newTitle}"**.` });
     }
 
@@ -674,7 +674,7 @@ function setupPresets(client) {
       }
       delete pendingEdits[userId];
       savePresets(presets);
-      auditLog('✏️ Preset Edited', `<@${interaction.user.id}> added **${added.length}** country(ies) to **${edit.factionName}** in preset **"${edit.presetName}"**.`, 0xfee75c);
+      auditLog(interaction.guildId, '✏️ Preset Edited', `<@${interaction.user.id}> added **${added.length}** country(ies) to **${edit.factionName}** in preset **"${edit.presetName}"**.`, 0xfee75c);
       let msg = `✅ Added **${added.length}** country(ies) to **${edit.factionName}** in **"${edit.presetName}"**.`;
       if (skipped.length > 0) msg += `\n⚠️ Skipped (already exist): ${skipped.join(', ')}`;
       return interaction.reply({ content: msg });
@@ -694,7 +694,7 @@ function setupPresets(client) {
       preset.factions[factionName] = { countries };
       delete pendingEdits[userId];
       savePresets(presets);
-      auditLog('✏️ Preset Edited', `<@${interaction.user.id}> added faction **${factionName}** (${countries.length} countries) to preset **"${edit.presetName}"**.`, 0xfee75c);
+      auditLog(interaction.guildId, '✏️ Preset Edited', `<@${interaction.user.id}> added faction **${factionName}** (${countries.length} countries) to preset **"${edit.presetName}"**.`, 0xfee75c);
       return interaction.reply({ content: `✅ Faction **${factionName}** (${countries.length} countries) added to preset **"${edit.presetName}"**.` });
     }
   });
