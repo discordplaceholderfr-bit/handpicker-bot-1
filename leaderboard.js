@@ -51,18 +51,20 @@ function getUser(guildId, userId, username) {
 function score(p) { return p.mvps * 2 + p.hms; }
 
 // ── Medal roles by MVP count (highest tier only) ─────────────────────────────
-// Role IDs come from per-guild config (/setup); thresholds are fixed. Sorted
-// high → low so the first tier a user qualifies for is their top medal. Returns
-// [] if this guild hasn't configured any medal roles.
+// Role + threshold for each of the 3 slots come from per-guild config (/setup),
+// both fully configurable. Sorted high → low so the first tier a user qualifies
+// for is their top medal. Returns [] if this guild hasn't configured any.
+const MEDAL_DEFAULT_MVPS = { 1: 1, 2: 5, 3: 8 };
+
 function medalTiers(guildId) {
   const tiers = [];
-  const purple = getKey(guildId, 'medalPurpleRoleId');
-  const airman = getKey(guildId, 'medalAirmanRoleId');
-  const bronze = getKey(guildId, 'medalBronzeRoleId');
-  if (purple) tiers.push({ roleId: purple, minMvps: 8 });
-  if (airman) tiers.push({ roleId: airman, minMvps: 5 });
-  if (bronze) tiers.push({ roleId: bronze, minMvps: 1 });
-  return tiers;
+  for (const n of [1, 2, 3]) {
+    const roleId = getKey(guildId, `medalRole${n}Id`);
+    if (!roleId) continue;
+    const minMvps = getKey(guildId, `medalRole${n}Mvps`) ?? MEDAL_DEFAULT_MVPS[n];
+    tiers.push({ roleId, minMvps });
+  }
+  return tiers.sort((a, b) => b.minMvps - a.minMvps);
 }
 
 // Give the member only the highest medal role they qualify for; strip the rest.
