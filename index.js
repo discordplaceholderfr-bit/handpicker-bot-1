@@ -57,6 +57,20 @@ client.once('clientReady', async (readyClient) => {
     // (Global registration can take up to ~1h to propagate the first time.)
     await rest.put(Routes.applicationCommands(readyClient.user.id), { body: allCommands });
     console.log(`✅ Registered ${allCommands.length} global slash commands`);
+
+    // Safety net: older versions of this bot registered commands guild-scoped
+    // to every server it was in. Those were never cleared when we switched to
+    // global-only, so servers the bot was already in before this show every
+    // command twice (once guild-scoped, once global). Clearing is idempotent —
+    // a no-op on guilds that never had guild commands — so it's safe to run
+    // on every boot rather than a one-off script.
+    for (const guild of readyClient.guilds.cache.values()) {
+      try {
+        await rest.put(Routes.applicationGuildCommands(readyClient.user.id, guild.id), { body: [] });
+      } catch (err) {
+        console.error(`Failed to clear guild-scoped commands for ${guild.id}:`, err);
+      }
+    }
   } catch (err) {
     console.error('Failed to register commands:', err);
   }
