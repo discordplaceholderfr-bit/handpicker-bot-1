@@ -33,6 +33,7 @@ const SETTINGS = [
   { key: 'logChannelId',      type: 'channel', label: '📢 Log Channel',      desc: 'List expiry / reset / reopen announcements' },
   { key: 'auditChannelId',    type: 'channel', label: '📝 Audit Log Channel', desc: 'Logs moderation & admin actions' },
   { key: 'rankingsChannelId', type: 'channel', label: '🏆 Rankings Channel', desc: 'Where the live leaderboard is pinned' },
+  { key: 'updatesChannelId',  type: 'channel', label: '🔔 Updates Channel',  desc: 'Posted here whenever the bot ships a new command/feature' },
   { key: 'hostRoles',         type: 'roles',   label: '🛡️ Host Roles',       desc: 'Roles allowed to run Host commands' },
   medalSetting(1), medalSetting(2), medalSetting(3),
 ];

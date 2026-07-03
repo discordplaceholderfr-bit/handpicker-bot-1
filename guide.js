@@ -15,7 +15,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/setup` — Admin',
-        value: 'Interactive panel for configuring this server. Pick a setting from the dropdown, then choose a channel or role from a native picker — changes save immediately.\n\n**Settings:**\n• 📢 Log Channel — list expiry / auto-reset / reopen announcements\n• 📝 Audit Log Channel — every moderation & admin action\n• 🏆 Rankings Channel — where the live leaderboard is pinned\n• 🛡️ Host Roles — who can run Host commands (multi-select)\n• 🎖️ 3 Medal Roles — each with its own configurable MVP threshold (e.g. "Role for 5+ MVPs"), full details in **🏆 Awards**',
+        value: 'Interactive panel for configuring this server. Pick a setting from the dropdown, then choose a channel or role from a native picker — changes save immediately.\n\n**Settings:**\n• 📢 Log Channel — list expiry / auto-reset / reopen announcements\n• 📝 Audit Log Channel — every moderation & admin action\n• 🏆 Rankings Channel — where the live leaderboard is pinned\n• 🔔 Updates Channel — posted here whenever the bot ships a new command/feature\n• 🛡️ Host Roles — who can run Host commands (multi-select)\n• 🎖️ 3 Medal Roles — each with its own configurable MVP threshold (e.g. "Role for 5+ MVPs"), full details in **🏆 Awards**',
       },
       {
         name: 'Nothing is required to work — features just skip',
@@ -30,7 +30,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '⚙️ Setup',
-        value: 'First step on a new server — an admin runs `/setup` to configure the log channel, audit channel, rankings channel, Host roles, and medal roles.',
+        value: 'First step on a new server — an admin runs `/setup` to configure the log channel, audit channel, rankings channel, updates channel, Host roles, and medal roles.',
       },
       {
         name: '📋 Creating',

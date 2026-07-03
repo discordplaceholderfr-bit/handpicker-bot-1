@@ -8,6 +8,7 @@
 //   logChannelId       — list expiry / auto-reset / reopen announcements
 //   auditChannelId      — moderation/admin action log
 //   rankingsChannelId   — pinned auto-updating leaderboard
+//   updatesChannelId    — bot version/feature announcements (see updateannouncer.js)
 //   hostRoles           — [roleId, ...] treated as Host (admins always count)
 //   medalRole{1,2,3}Id / medalRole{1,2,3}Mvps — MVP medal tiers (role + configurable threshold)
 const fs   = require('fs');

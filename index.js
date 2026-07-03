@@ -9,6 +9,7 @@ const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
 const { setupSetup, setupCommands } = require('./setup');
 const { initAuditLog } = require('./auditlog');
+const { announceUpdates } = require('./updateannouncer');
 const lock = require('./lock');
 
 process.setMaxListeners(100);
@@ -73,6 +74,12 @@ client.once('clientReady', async (readyClient) => {
     }
   } catch (err) {
     console.error('Failed to register commands:', err);
+  }
+
+  try {
+    await announceUpdates(readyClient);
+  } catch (err) {
+    console.error('Failed to announce updates:', err);
   }
 });
 
