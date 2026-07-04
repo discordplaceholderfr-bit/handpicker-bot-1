@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 const { isAdmin, denyAdmin } = require('./permissions');
 const { getConfig, setKey } = require('./guildconfig');
+const { TEAM_SLOT_COUNT, teamRoleKey } = require('./teams');
 
 const MEDAL_ICONS = { 1: '🥉', 2: '🥈', 3: '🥇' };
 const MEDAL_DEFAULT_MVPS = { 1: 1, 2: 5, 3: 8 };
@@ -27,24 +28,36 @@ function medalSetting(n) {
   };
 }
 
-// Each configurable setting. type: 'channel' | 'role' | 'roles' | 'medal'
+// The 5 Team Role slots — position-based (slot N = whichever faction ends up
+// in position N of a given handpick list), so they're configured once here
+// instead of per-list.
+function teamSlots() {
+  return Array.from({ length: TEAM_SLOT_COUNT }, (_, i) => ({ position: i + 1, key: teamRoleKey(i + 1) }));
+}
+
+// Each configurable setting. type: 'channel' | 'role' | 'roles' | 'medal' | 'teamgroup'
 // 'medal' settings pair a role with a configurable MVP threshold (not preset).
+// 'teamgroup' is a single menu entry that opens a sub-panel for the 5 Team Role slots.
 const SETTINGS = [
-  { key: 'logChannelId',      type: 'channel', label: '📢 Log Channel',      desc: 'List expiry / reset / reopen announcements' },
-  { key: 'auditChannelId',    type: 'channel', label: '📝 Audit Log Channel', desc: 'Logs moderation & admin actions' },
-  { key: 'rankingsChannelId', type: 'channel', label: '🏆 Rankings Channel', desc: 'Where the live leaderboard is pinned' },
-  { key: 'updatesChannelId',  type: 'channel', label: '🔔 Updates Channel',  desc: 'Posted here whenever the bot ships a new command/feature' },
-  { key: 'hostRoles',         type: 'roles',   label: '🛡️ Host Roles',       desc: 'Roles allowed to run Host commands' },
+  { key: 'logChannelId',      type: 'channel',   label: '📢 Log Channel',      desc: 'List expiry / reset / reopen announcements' },
+  { key: 'auditChannelId',    type: 'channel',   label: '📝 Audit Log Channel', desc: 'Logs moderation & admin actions' },
+  { key: 'rankingsChannelId', type: 'channel',   label: '🏆 Rankings Channel', desc: 'Where the live leaderboard is pinned' },
+  { key: 'updatesChannelId',  type: 'channel',   label: '🔔 Updates Channel',  desc: 'Posted here whenever the bot ships a new command/feature' },
+  { key: 'hostRoles',         type: 'roles',     label: '🛡️ Host Roles',       desc: 'Roles allowed to run Host commands' },
   medalSetting(1), medalSetting(2), medalSetting(3),
+  { key: 'teamRoles',         type: 'teamgroup', label: '🎖️ Team Roles',       desc: 'Assign a role per faction position — applies to every list automatically' },
 ];
 
 // Finds which SETTINGS entry "owns" a given store key — either the entry's own
-// key, or (for medal settings) its roleKey/mvpsKey sub-fields.
+// key, a medal setting's roleKey/mvpsKey sub-fields, or one of the 5 team slots.
 function ownerSetting(key) {
   const direct = SETTINGS.find(s => s.key === key);
   if (direct) return { owner: direct, subtype: direct.type };
   const medal = SETTINGS.find(s => s.type === 'medal' && (s.roleKey === key || s.mvpsKey === key));
   if (medal) return { owner: medal, subtype: medal.roleKey === key ? 'role' : 'number' };
+  if (teamSlots().some(s => s.key === key)) {
+    return { owner: SETTINGS.find(s => s.type === 'teamgroup'), subtype: 'teamslot' };
+  }
   return null;
 }
 
@@ -60,6 +73,10 @@ function renderValue(setting, cfg) {
   if (setting.type === 'medal') {
     const v = cfg[setting.roleKey];
     return v ? `<@&${v}>` : '❌ not set';
+  }
+  if (setting.type === 'teamgroup') {
+    const count = teamSlots().filter(s => cfg[s.key]).length;
+    return `${count}/${TEAM_SLOT_COUNT} configured`;
   }
   const v = cfg[setting.key];
   if (setting.type === 'channel') return v ? `<#${v}>` : '❌ not set';
@@ -143,10 +160,58 @@ function pickerPayload(setting, userId, guildId) {
   };
 }
 
+function teamGroupPayload(userId, guildId) {
+  const cfg   = getConfig(guildId);
+  const slots = teamSlots();
+  const lines = slots.map(s => `**Team ${s.position}** → ${cfg[s.key] ? `<@&${cfg[s.key]}>` : '❌ not set'}`);
+  const embed = new EmbedBuilder()
+    .setTitle('⚙️ Setup — Team Roles')
+    .setColor(0x5865f2)
+    .setDescription(`Assign a role to each **position** in your handpick lists. Whichever faction ends up in that position (1st, 2nd, 3rd...) automatically gets the matching role when claimed — no need to re-run this per list.\n\n${lines.join('\n')}`);
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`setup_teamslot_menu__${userId}`)
+    .setPlaceholder('Pick a slot to set its role...')
+    .addOptions(slots.map(s => ({
+      label: `Team ${s.position}${cfg[s.key] ? ' ✅' : ''}`,
+      description: cfg[s.key] ? 'Role set — pick to change' : 'No role set yet',
+      value: s.key,
+    })));
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(menu),
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`setup_back__${userId}`).setLabel('◀ Back').setStyle(ButtonStyle.Secondary)
+      ),
+    ],
+  };
+}
+
+function teamSlotPickerPayload(slotKey, userId, guildId) {
+  const position = teamSlots().find(s => s.key === slotKey)?.position ?? '?';
+  const roleSelect = new RoleSelectMenuBuilder()
+    .setCustomId(`setup_set__${slotKey}__${userId}`)
+    .setPlaceholder(`Pick the role for Team ${position}`)
+    .setMinValues(1).setMaxValues(1);
+  const embed = new EmbedBuilder()
+    .setTitle(`⚙️ Setup — Team ${position} Role`)
+    .setColor(0x5865f2)
+    .setDescription(`Whoever claims the faction in position **${position}** of a handpick list automatically receives this role (and loses it on unclaim/removal/swap).`);
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(roleSelect),
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`setup_teamback__${userId}`).setLabel('◀ Back to Team Roles').setStyle(ButtonStyle.Secondary)
+      ),
+    ],
+  };
+}
+
 const setupCommands = [
   new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Admin: Configure this server — log channels, host roles, medal roles')
+    .setDescription('Admin: Configure this server — log channels, host roles, medal & team roles')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .toJSON(),
 ];
@@ -169,7 +234,15 @@ function setupSetup(client) {
         if (interaction.user.id !== userId) return notYours(interaction);
         const setting = SETTINGS.find(s => s.key === interaction.values[0]);
         if (!setting) return interaction.update(panelPayload(interaction.guildId, userId));
+        if (setting.type === 'teamgroup') return interaction.update(teamGroupPayload(userId, interaction.guildId));
         return interaction.update(pickerPayload(setting, userId, interaction.guildId));
+      }
+
+      // ── Team slot picked from the Teams sub-panel → show its role picker ──
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('setup_teamslot_menu__')) {
+        const userId = interaction.customId.split('__')[1];
+        if (interaction.user.id !== userId) return notYours(interaction);
+        return interaction.update(teamSlotPickerPayload(interaction.values[0], userId, interaction.guildId));
       }
 
       // ── Back → return to panel ──
@@ -177,6 +250,13 @@ function setupSetup(client) {
         const userId = interaction.customId.split('__')[1];
         if (interaction.user.id !== userId) return notYours(interaction);
         return interaction.update(panelPayload(interaction.guildId, userId));
+      }
+
+      // ── Back (from a team slot picker) → return to the Teams sub-panel ──
+      if (interaction.isButton() && interaction.customId.startsWith('setup_teamback__')) {
+        const userId = interaction.customId.split('__')[1];
+        if (interaction.user.id !== userId) return notYours(interaction);
+        return interaction.update(teamGroupPayload(userId, interaction.guildId));
       }
 
       // ── Medal threshold button → show a modal for the MVP count ──
@@ -235,9 +315,13 @@ function setupSetup(client) {
           setKey(interaction.guildId, key, value);
         }
         // Medal sub-fields go back to that medal's picker (so the threshold is
-        // easy to set right after); everything else returns to the main panel.
+        // easy to set right after); team slots go back to the Teams sub-panel;
+        // everything else returns to the main panel.
         if (found && found.owner.type === 'medal') {
           return interaction.update(pickerPayload(found.owner, userId, interaction.guildId));
+        }
+        if (found && found.subtype === 'teamslot') {
+          return interaction.update(teamGroupPayload(userId, interaction.guildId));
         }
         return interaction.update(panelPayload(interaction.guildId, userId));
       }

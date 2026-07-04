@@ -15,7 +15,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '`/setup` — Admin',
-        value: 'Interactive panel for configuring this server. Pick a setting from the dropdown, then choose a channel or role from a native picker — changes save immediately.\n\n**Settings:**\n• 📢 Log Channel — list expiry / auto-reset / reopen announcements\n• 📝 Audit Log Channel — every moderation & admin action\n• 🏆 Rankings Channel — where the live leaderboard is pinned\n• 🔔 Updates Channel — posted here whenever the bot ships a new command/feature\n• 🛡️ Host Roles — who can run Host commands (multi-select)\n• 🎖️ 3 Medal Roles — each with its own configurable MVP threshold (e.g. "Role for 5+ MVPs"), full details in **🏆 Awards**',
+        value: 'Interactive panel for configuring this server. Pick a setting from the dropdown, then choose a channel or role from a native picker — changes save immediately.\n\n**Settings:**\n• 📢 Log Channel — list expiry / auto-reset / reopen announcements\n• 📝 Audit Log Channel — every moderation & admin action\n• 🏆 Rankings Channel — where the live leaderboard is pinned\n• 🔔 Updates Channel — posted here whenever the bot ships a new command/feature\n• 🛡️ Host Roles — who can run Host commands (multi-select)\n• 🎖️ 3 Medal Roles — each with its own configurable MVP threshold (e.g. "Role for 5+ MVPs"), full details in **🏆 Awards**\n• 🎖️ Team Roles — 5 position-based slots for automatic team-role assignment, full details in **🎖️ Teams**',
       },
       {
         name: 'Nothing is required to work — features just skip',
@@ -30,7 +30,7 @@ const CATEGORIES = {
     fields: [
       {
         name: '⚙️ Setup',
-        value: 'First step on a new server — an admin runs `/setup` to configure the log channel, audit channel, rankings channel, updates channel, Host roles, and medal roles.',
+        value: 'First step on a new server — an admin runs `/setup` to configure the log channel, audit channel, rankings channel, updates channel, Host roles, medal roles, and team roles.',
       },
       {
         name: '📋 Creating',
@@ -131,7 +131,7 @@ const CATEGORIES = {
       },
       {
         name: '`/load_preset` — Host',
-        value: 'Deploy a saved preset as a new handpick list. Pick from a dropdown. Before it posts you\'re asked about pre-assigning players.\n\n**Team role auto-mapping:** if your server has roles named **Team 1**, **Team 2**, **Team 3** etc., the bot maps them to factions in order automatically — no `/setup_team` needed.',
+        value: 'Deploy a saved preset as a new handpick list. Pick from a dropdown. Before it posts you\'re asked about pre-assigning players.\n\n**Team roles:** applied automatically based on faction position — see **🎖️ Teams** for how to configure them via `/setup`.',
       },
       {
         name: '`/edit_preset` — Host',
@@ -231,23 +231,15 @@ const CATEGORIES = {
     fields: [
       {
         name: 'How team roles work',
-        value: 'When a player claims a country the bot checks which faction it belongs to and gives them the mapped Discord role automatically. When they unclaim or get removed, the role is stripped. This lets you control channel access entirely through Discord\'s permission system.',
+        value: 'Configured once per server via `/setup` → **🎖️ Team Roles** — no per-list setup, no relying on roles named "Team 1/2/3". Each of the 5 slots holds a role for a **position**: Slot 1\'s role goes to whoever claims the faction in the 1st position of a list, Slot 2 to the 2nd, and so on. It automatically applies to every list you create from then on.',
       },
       {
-        name: 'Auto-mapping on list creation',
-        value: 'When you use `/create_handpick` or `/load_preset`, the bot looks for roles named **Team 1**, **Team 2**, **Team 3**, etc. in your server and maps them to factions in order. If those roles exist, no manual setup is needed — it happens silently.',
+        name: 'Position, not name',
+        value: 'Position is just the order factions were added in — the 1st faction in `/create_handpick`, `/import_handpick`, or a preset\'s faction list is "position 1", etc. The role updates automatically on claim, unclaim, player removal, and swap.',
       },
       {
-        name: '`/setup_team` — Host',
-        value: 'Manually map a specific faction to a Discord role. The faction name must match **exactly** as it appears in the list, including capitalisation.\n\n**Example:** `/setup_team faction:Axis role:@Team 1`\n\nUse this to override auto-mapping or to set up roles that aren\'t named Team 1/2/3.',
-      },
-      {
-        name: '`/list_teams`',
-        value: 'Show all current faction → role mappings for this server. Run this after creating or loading a list to confirm auto-mapping worked correctly.',
-      },
-      {
-        name: '`/remove_team` — Host',
-        value: 'Delete one specific faction → role mapping via dropdown. Players who already have the role keep it — only future claims in that faction are affected.',
+        name: 'Current configuration',
+        value: 'TEAMS_SUMMARY_PLACEHOLDER',
       },
     ],
   },
@@ -271,10 +263,6 @@ const CATEGORIES = {
       {
         name: '🏁 Results',
         value: '`/delete_result` — delete one result (revokes its awards)\n`/reset_results` — wipe **all** results (revokes all their awards)',
-      },
-      {
-        name: '🎖️ Teams',
-        value: '`/clear_teams` — remove **all** faction → role mappings',
       },
     ],
   },
@@ -342,7 +330,7 @@ const MENU = [
   { key: 'restrictions', desc: 'Blacklist players from claiming' },
   { key: 'awards',       desc: 'MVPs, HMs, rankings & results' },
   { key: 'players',      desc: 'Claiming, swaps, majors, preset players' },
-  { key: 'teams',        desc: 'Automatic team-role assignment' },
+  { key: 'teams',        desc: 'Team roles by faction position (/setup)' },
   { key: 'resets',       desc: 'Delete or wipe lists, presets, results…' },
   { key: 'extras',       desc: 'Overflow (Extra) country slots' },
   { key: 'logging',      desc: 'What gets logged, and where' },
@@ -388,11 +376,26 @@ function medalSummary(guildId) {
   return `Players are automatically given a **medal role based on their MVP count** — they hold only the **highest** tier they qualify for:\n${lines}\n\nThe role updates automatically whenever MVPs change (given, removed, results posted/edited/deleted). Run **\`/sync_medals\`** *(Admin)* once to grant medals to everyone who already qualifies. Configure roles/thresholds via \`/setup\`.`;
 }
 
+// Team roles are 5 position-based slots configured per guild via /setup.
+function teamsSummary(guildId) {
+  const { teamRoleKey, TEAM_SLOT_COUNT } = require('./teams');
+  const slots = Array.from({ length: TEAM_SLOT_COUNT }, (_, i) => ({
+    position: i + 1,
+    roleId: getKey(guildId, teamRoleKey(i + 1)),
+  })).filter(s => s.roleId);
+  if (!slots.length) {
+    return 'None of the 5 Team Role slots are set up yet for this server. Configure them via `/setup` → 🎖️ Team Roles.';
+  }
+  const lines = slots.map(s => `• Position ${s.position} → <@&${s.roleId}>`).join('\n');
+  return `${lines}\n\nConfigure or change these via \`/setup\` → 🎖️ Team Roles.`;
+}
+
 function buildEmbed(key, guildId) {
   const cat = CATEGORIES[key];
   const fields = cat.fields.map(f => {
     if (f.value === 'LOGGING_SUMMARY_PLACEHOLDER') return { ...f, value: loggingSummary(guildId) };
     if (f.value === 'MEDAL_SUMMARY_PLACEHOLDER')   return { ...f, value: medalSummary(guildId) };
+    if (f.value === 'TEAMS_SUMMARY_PLACEHOLDER')   return { ...f, value: teamsSummary(guildId) };
     return f;
   });
   const footer = key === 'overview'

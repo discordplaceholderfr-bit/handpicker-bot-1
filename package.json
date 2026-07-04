@@ -1,6 +1,6 @@
 {
   "name": "handpicker-bot",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Discord Automatic Handpicker bot with country claiming and MVP/HM leaderboard",
   "main": "index.js",
   "scripts": {

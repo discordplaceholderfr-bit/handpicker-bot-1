@@ -11,6 +11,7 @@
 //   updatesChannelId    — bot version/feature announcements (see updateannouncer.js)
 //   hostRoles           — [roleId, ...] treated as Host (admins always count)
 //   medalRole{1,2,3}Id / medalRole{1,2,3}Mvps — MVP medal tiers (role + configurable threshold)
+//   teamRole{1-5}Id     — team role per faction POSITION in a list (see teams.js)
 const fs   = require('fs');
 const path = require('path');
 const { writeJson } = require('./jsonstore');

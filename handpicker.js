@@ -65,7 +65,7 @@ async function stripAllTeamRoles(client, game) {
     const { removeTeam } = require('./teams');
     for (const [factionName, faction] of Object.entries(game.factions || {})) {
       for (const uid of Object.values(faction.claims || {})) {
-        if (uid) await removeTeam(guild, uid, factionName).catch(() => {});
+        if (uid) await removeTeam(guild, uid, factionName, game).catch(() => {});
       }
     }
   } catch (e) { console.warn('Could not strip team roles:', e.message); }
@@ -324,7 +324,7 @@ async function performUnclaim(client, interaction, gameId) {
   await refreshMessage(client, gameId, game);
   if (interaction.guild && removedFaction) {
     const { removeTeam } = require('./teams');
-    await removeTeam(interaction.guild, userId, removedFaction);
+    await removeTeam(interaction.guild, userId, removedFaction, game);
   }
 }
 
@@ -489,7 +489,7 @@ async function removeAllTeamRoles(guild, game) {
     const { removeTeam } = require('./teams');
     for (const [factionName, faction] of Object.entries(game.factions)) {
       for (const userId of Object.values(faction.claims)) {
-        await removeTeam(guild, userId, factionName).catch(() => {});
+        await removeTeam(guild, userId, factionName, game).catch(() => {});
       }
     }
   } catch (e) {
@@ -533,25 +533,6 @@ function setupHandpicker(client) {
       const game   = { title, host: interaction.user.id, guildId, channelId: interaction.channelId, factions };
 
       pendingGames[gameId] = { game, factionOrder, channelId: interaction.channelId };
-
-      if (interaction.guild) {
-        const teamRoles = interaction.guild.roles.cache
-          .filter(r => /^Team\s*\d+$/i.test(r.name))
-          .sort((a, b) => parseInt(a.name.match(/\d+/)[0]) - parseInt(b.name.match(/\d+/)[0]));
-
-        if (teamRoles.size >= factionOrder.length) {
-          const TEAMS_FILE_PATH = path.join(DATA_DIR, 'teams.json');
-          let teamsData = {};
-          try { teamsData = JSON.parse(require('fs').readFileSync(TEAMS_FILE_PATH, 'utf8')); } catch {}
-          if (!teamsData[guildId]) teamsData[guildId] = {};
-          const roleArray = [...teamRoles.values()];
-          factionOrder.forEach((factionName, i) => {
-            teamsData[guildId][factionName] = { roleId: roleArray[i].id };
-          });
-          writeJson(TEAMS_FILE_PATH, teamsData);
-          try { const tm = require('./teams'); if (tm._reloadTeams) tm._reloadTeams(); } catch {}
-        }
-      }
 
       const presetBtn = new ButtonBuilder()
         .setCustomId(`open_preset_players__${gameId}`)
@@ -670,7 +651,7 @@ function setupHandpicker(client) {
         for (const [fn, f] of Object.entries(game.factions)) {
           if (Object.keys(f.claims).includes(claimedName)) { claimedFaction = fn; break; }
         }
-        if (claimedFaction) await assignTeam(interaction.guild, userId, claimedFaction);
+        if (claimedFaction) await assignTeam(interaction.guild, userId, claimedFaction, game);
       }
 
       return interaction.reply({ content: `✅ You claimed **${claimedName}**!` });
@@ -695,7 +676,7 @@ function setupHandpicker(client) {
         if (!foundCountry) return interaction.reply({ content: `❌ <@${targetUser.id}> has no claim in **${game.title}**.`, ephemeral: true });
         delete game.factions[foundFaction].claims[foundCountry];
         save(GAMES_FILE, games);
-        if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUser.id, foundFaction).catch(() => {}); }
+        if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUser.id, foundFaction, game).catch(() => {}); }
         await refreshMessage(client, gameId, game);
         return interaction.reply({ content: `✅ Removed <@${targetUser.id}>'s claim on **${foundCountry}** (${foundFaction}).` });
       }
@@ -1012,7 +993,7 @@ function setupHandpicker(client) {
     checkClaimNotifications(client, gameId, game).catch(() => {});
     if (interaction.guild) {
       const { assignTeam } = require('./teams');
-      await assignTeam(interaction.guild, userId, factionName);
+      await assignTeam(interaction.guild, userId, factionName, game);
     }
   });
 
@@ -1109,7 +1090,7 @@ function setupHandpicker(client) {
     if (faction && interaction.guild) {
       const { removeTeam } = require('./teams');
       for (const uid of Object.values(faction.claims)) {
-        await removeTeam(interaction.guild, uid, factionName).catch(() => {});
+        await removeTeam(interaction.guild, uid, factionName, game).catch(() => {});
       }
     }
     delete game.factions[factionName];
@@ -1150,7 +1131,7 @@ function setupHandpicker(client) {
     const claimedBy = faction.claims[country];
     if (claimedBy && interaction.guild) {
       const { removeTeam } = require('./teams');
-      await removeTeam(interaction.guild, claimedBy, factionName).catch(() => {});
+      await removeTeam(interaction.guild, claimedBy, factionName, game).catch(() => {});
     }
     faction.countries = faction.countries.filter(c => c !== country);
     delete faction.claims[country];
@@ -1169,7 +1150,7 @@ function setupHandpicker(client) {
     if (!game) return interaction.update({ content: '❌ List no longer exists.', components: [] });
     delete game.factions[factionName]?.claims[country];
     save(GAMES_FILE, games);
-    if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUserId, factionName).catch(() => {}); }
+    if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, targetUserId, factionName, game).catch(() => {}); }
     await refreshMessage(client, gameId, game);
     return interaction.update({ content: `✅ <@${targetUserId}>'s claim on **${country}** has been removed.`, components: [] });
   });
@@ -1205,7 +1186,7 @@ function setupHandpicker(client) {
         if (!foundFaction) { failed.push(`${country}: not found in any faction`); continue; }
         const existing = game.factions[foundFaction].claims[country];
         if (existing && existing !== userId) {
-          if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, existing, foundFaction).catch(() => {}); }
+          if (interaction.guild) { const { removeTeam } = require('./teams'); await removeTeam(interaction.guild, existing, foundFaction, game).catch(() => {}); }
         }
         const exactCountry = game.factions[foundFaction].countries.find(c => c.toLowerCase() === country.toLowerCase());
         game.factions[foundFaction].claims[exactCountry] = userId;
@@ -1214,7 +1195,7 @@ function setupHandpicker(client) {
       save(GAMES_FILE, games);
       if (interaction.guild) {
         const { assignTeam } = require('./teams');
-        for (const { userId, factionName } of assigned) { await assignTeam(interaction.guild, userId, factionName).catch(() => {}); }
+        for (const { userId, factionName } of assigned) { await assignTeam(interaction.guild, userId, factionName, game).catch(() => {}); }
       }
       let resultText = `✅ **${assigned.length}** player(s) pre-assigned:\n`;
       for (const { country, userId } of assigned) { resultText += `**${country}** → <@${userId}>\n`; }
@@ -1295,10 +1276,10 @@ function setupHandpicker(client) {
 
       if (interaction.guild) {
         const { assignTeam, removeTeam } = require('./teams');
-        await removeTeam(interaction.guild, swap.initiatorId, swap.initiatorFaction).catch(() => {});
-        await removeTeam(interaction.guild, swap.targetId,    swap.targetFaction).catch(() => {});
-        await assignTeam(interaction.guild, swap.initiatorId, swap.targetFaction).catch(() => {});
-        await assignTeam(interaction.guild, swap.targetId,    swap.initiatorFaction).catch(() => {});
+        await removeTeam(interaction.guild, swap.initiatorId, swap.initiatorFaction, game).catch(() => {});
+        await removeTeam(interaction.guild, swap.targetId,    swap.targetFaction,    game).catch(() => {});
+        await assignTeam(interaction.guild, swap.initiatorId, swap.targetFaction,    game).catch(() => {});
+        await assignTeam(interaction.guild, swap.targetId,    swap.initiatorFaction, game).catch(() => {});
       }
 
       await refreshMessage(client, swap.gameId, game);

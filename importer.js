@@ -226,40 +226,6 @@ function setupImporter(client) {
       await postUnclaimMessage(interaction.channel, game, gameId);
       saveGame(gameId, game);
 
-      // Auto-map team roles
-      if (interaction.guild) {
-        const teamRoles = interaction.guild.roles.cache
-          .filter(r => /^Team\s*\d+$/i.test(r.name))
-          .sort((a, b) => parseInt(a.name.match(/\d+/)[0]) - parseInt(b.name.match(/\d+/)[0]));
-
-        if (teamRoles.size >= factionOrder.length) {
-          const DATA_DIR = process.env.DATA_DIR || require('path').join(__dirname, 'data');
-          const TEAMS_FILE_PATH = require('path').join(DATA_DIR, 'teams.json');
-          let teamsData = {};
-          try { teamsData = JSON.parse(require('fs').readFileSync(TEAMS_FILE_PATH, 'utf8')); } catch {}
-          if (!teamsData[guildId]) teamsData[guildId] = {};
-
-          const roleArray    = [...teamRoles.values()];
-          const mappingLines = [];
-          factionOrder.forEach((factionName, i) => {
-            const role = roleArray[i];
-            teamsData[guildId][factionName] = { roleId: role.id };
-            mappingLines.push(`**${factionName}** → <@&${role.id}>`);
-          });
-
-          require('./jsonstore').writeJson(TEAMS_FILE_PATH, teamsData);
-
-          try {
-            const teamsModule = require('./teams');
-            if (teamsModule._reloadTeams) teamsModule._reloadTeams();
-          } catch {}
-
-          await interaction.followUp({
-            content: '🎖️ **Team roles auto-mapped:**\n' + mappingLines.join('\n'),
-          });
-        }
-      }
-
     } catch (err) {
       console.error('import_modal submit error:', err);
       const msg = `❌ Something went wrong: ${err.message}`;

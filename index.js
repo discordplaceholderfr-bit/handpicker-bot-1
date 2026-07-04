@@ -3,7 +3,6 @@ const { Client, GatewayIntentBits, Partials, REST, Routes } = require('discord.j
 const { setupHandpicker, handpickerCommands } = require('./handpicker');
 const { setupLeaderboard, leaderboardCommands } = require('./leaderboard');
 const { setupPresets, presetCommands } = require('./presets');
-const { setupTeams, teamCommands } = require('./teams');
 const { setupImporter, importerCommands } = require('./importer');
 const { setupGuide, guideCommands } = require('./guide');
 const { setupResults, resultsCommands } = require('./results');
@@ -44,7 +43,6 @@ client.once('clientReady', async (readyClient) => {
     ...handpickerCommands,
     ...leaderboardCommands,
     ...presetCommands,
-    ...teamCommands,
     ...importerCommands,
     ...guideCommands,
     ...resultsCommands,
@@ -186,7 +184,6 @@ initAuditLog(client);
 setupHandpicker(client);
 setupLeaderboard(client);
 setupPresets(client);
-setupTeams(client);
 setupImporter(client);
 setupGuide(client);
 setupResults(client);

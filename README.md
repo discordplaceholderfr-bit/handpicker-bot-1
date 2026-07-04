@@ -3,7 +3,8 @@
 A Discord bot for running Rise of Nations country-claiming games, with team
 roles, reusable presets, event results, and a full MVP/HM leaderboard. Fully
 multi-server: install it on any server and run `/setup` once to configure
-that server's channels, Host role(s), and medal roles — nothing is hardcoded.
+that server's channels, Host role(s), medal roles, and team roles — nothing
+is hardcoded.
 
 ---
 
@@ -12,7 +13,7 @@ that server's channels, Host role(s), and medal roles — nothing is hardcoded.
 ### ⚙️ Setup *(Administrator)*
 | Command | Description |
 |---|---|
-| `/setup` | Interactive panel — set the log channel, audit log channel, rankings channel, Host role(s), and the 3 configurable MVP medal roles |
+| `/setup` | Interactive panel — set the log channel, audit log channel, rankings channel, updates channel, Host role(s), the 3 configurable MVP medal roles, and the 5 position-based team roles |
 
 ### 🗺️ Handpick lists *(Host)*
 | Command | Description |
@@ -73,12 +74,10 @@ and `(Extra)` slots remain, the host gets a DM to open or remove them.
 | `/reset_presets` | **Admin:** wipe all saved presets (irreversible) |
 
 ### 👥 Teams
-| Command | Description |
-|---|---|
-| `/setup_team` | Manually map a faction name to a team role |
-| `/list_teams` | Show all faction → team role mappings |
-| `/remove_team` | Remove the mapping for one faction |
-| `/clear_teams` | **Admin:** remove all team mappings |
+
+Team roles are configured once per server via `/setup` → 🎖️ Team Roles: each
+of 5 slots holds a role for a **position** (1st faction in a list, 2nd, etc.),
+so it applies automatically to every list — no per-list command needed.
 
 ### ⭐ Majors & guide
 | Command | Permission | Description |
