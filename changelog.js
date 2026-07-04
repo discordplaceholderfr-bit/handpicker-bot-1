@@ -1,9 +1,12 @@
 // Changelog announced to each guild's configured Updates Channel (/setup →
-// 🔔 Updates Channel). Add a new entry here whenever a command or feature
-// ships, then bump "version" in package.json to match — updateannouncer.js
-// posts the entry once, on the first boot after the version changes.
+// 🔔 Updates Channel). Add a new entry here with the next integer `id`
+// whenever a command or feature ships — no version bump required, and no
+// entry is ever skipped even if several ship between deploys.
+// updateannouncer.js posts each not-yet-announced entry once, as its own
+// message, tracked via `lastAnnouncedId` (see data/botstate.json).
 module.exports = [
   {
+    id: 1,
     version: '2.1.0',
     title: 'New: Update Announcements',
     notes: [
@@ -11,6 +14,7 @@ module.exports = [
     ],
   },
   {
+    id: 2,
     version: '2.2.0',
     title: 'Team Roles moved into /setup',
     notes: [
