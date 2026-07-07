@@ -30,4 +30,11 @@ module.exports = [
       'It now always replies with the leaderboard directly. If a rankings channel is configured, it also keeps the live pinned copy there up to date — same as before.',
     ],
   },
+  {
+    id: 4,
+    title: '/rankings is now posted publicly',
+    notes: [
+      '`/rankings` replies were private (only you could see them) — now the leaderboard it posts is visible to everyone in the channel, like other award commands.',
+    ],
+  },
 ];

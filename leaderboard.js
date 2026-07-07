@@ -354,7 +354,7 @@ function setupLeaderboard(client) {
       const note = channelId
         ? `📌 Also kept live in <#${channelId}> — it updates automatically whenever awards change.`
         : '💡 An admin can run `/setup` to pin a live, auto-updating copy of this in a channel.';
-      await interaction.reply({ ...payload, content: note, ephemeral: true });
+      await interaction.reply({ ...payload, content: note });
       if (channelId) refreshRankingsMessage(guildId).catch(() => {});
       return;
     }
