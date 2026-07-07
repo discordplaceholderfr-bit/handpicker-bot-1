@@ -350,19 +350,12 @@ function setupLeaderboard(client) {
 
     if (commandName === 'rankings') {
       const channelId = getKey(guildId, 'rankingsChannelId');
-      if (!channelId) {
-        return interaction.reply({
-          content: '❌ No rankings channel is set for this server. An admin can set one with `/setup`.',
-          ephemeral: true,
-        });
-      }
-      // Ack immediately, then (re)post/refresh the single pinned live leaderboard
-      // in the configured channel so the auto-updating copy always lives there.
-      await interaction.reply({
-        content: `📌 The live leaderboard is pinned in <#${channelId}> and updates automatically whenever awards change.`,
-        ephemeral: true,
-      });
-      refreshRankingsMessage(guildId).catch(() => {});
+      const payload = buildRankingsPayload(guildId, 0);
+      const note = channelId
+        ? `📌 Also kept live in <#${channelId}> — it updates automatically whenever awards change.`
+        : '💡 An admin can run `/setup` to pin a live, auto-updating copy of this in a channel.';
+      await interaction.reply({ ...payload, content: note, ephemeral: true });
+      if (channelId) refreshRankingsMessage(guildId).catch(() => {});
       return;
     }
 

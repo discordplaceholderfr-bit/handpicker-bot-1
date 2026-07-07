@@ -22,4 +22,12 @@ module.exports = [
       'Team roles are now configured once via `/setup` → 🎖️ Team Roles: 5 slots, each assigned to a **position** (1st faction in a list, 2nd, etc.) instead of a faction name — set it once and it applies to every list automatically.',
     ],
   },
+  {
+    id: 3,
+    title: 'Fixed: /rankings now actually shows the leaderboard',
+    notes: [
+      '`/rankings` used to just say "already pinned in #channel" (or error if no channel was set) without ever showing the standings themselves.',
+      'It now always replies with the leaderboard directly. If a rankings channel is configured, it also keeps the live pinned copy there up to date — same as before.',
+    ],
+  },
 ];

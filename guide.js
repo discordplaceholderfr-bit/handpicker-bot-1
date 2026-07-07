@@ -177,7 +177,7 @@ const CATEGORIES = {
       },
       {
         name: '`/rankings`',
-        value: 'Maintains a single **live leaderboard** that stays **pinned in the dedicated rankings channel** and **auto-updates** whenever an MVP or HM is given, removed, or results are posted. Running `/rankings` (re)posts/refreshes that pinned message and replies privately with a link to it. Players are ranked by score with tied players sharing a rank, and it includes a **Server Statistics** panel (total players, total MVPs/HMs, average score, current #1). Long leaderboards are split into ◀ Prev / Next ▶ pages.',
+        value: 'Shows you the leaderboard privately, right away — ranked by score with tied players sharing a rank, plus a **Server Statistics** panel (total players, total MVPs/HMs, average score, current #1). Long leaderboards are split into ◀ Prev / Next ▶ pages.\n\nIf a rankings channel is configured (`/setup`), it also refreshes a **live, auto-updating, pinned copy** there whenever an MVP or HM is given, removed, or results are posted — you don\'t need to run `/rankings` again to keep that one current.',
       },
       {
         name: 'Logging results — Host',
