@@ -351,10 +351,7 @@ function setupLeaderboard(client) {
     if (commandName === 'rankings') {
       const channelId = getKey(guildId, 'rankingsChannelId');
       const payload = buildRankingsPayload(guildId, 0);
-      const note = channelId
-        ? `📌 Also kept live in <#${channelId}> — it updates automatically whenever awards change.`
-        : '💡 An admin can run `/setup` to pin a live, auto-updating copy of this in a channel.';
-      await interaction.reply({ ...payload, content: note });
+      await interaction.reply(payload);
       if (channelId) refreshRankingsMessage(guildId).catch(() => {});
       return;
     }

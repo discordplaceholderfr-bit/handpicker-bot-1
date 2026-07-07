@@ -37,4 +37,11 @@ module.exports = [
       '`/rankings` replies were private (only you could see them) — now the leaderboard it posts is visible to everyone in the channel, like other award commands.',
     ],
   },
+  {
+    id: 5,
+    title: 'Cleaned up /rankings output',
+    notes: [
+      'Removed the extra "Also kept live in #channel..." note line — `/rankings` now just posts the leaderboard itself.',
+    ],
+  },
 ];
